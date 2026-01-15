@@ -24,39 +24,52 @@ export interface GrantsGovSearchParams {
     startRecordNum?: number;
 }
 
+// The item returned in search results "oppHits"
+export interface GrantsGovSearchHit {
+    id: string;
+    number: string;
+    title: string;
+    agency: string;
+    openDate: string;
+    closeDate: string;
+    cfdaList?: string[];
+}
+
+// The detailed opportunity object (fetched individually)
 export interface GrantsGovOpportunity {
-    opportunityId: string;
+    opportunityId: string; // "id" in search hit, mapped to this
     opportunityTitle: string;
     opportunityNumber: string;
     owningAgencyCode: string;
-    owningAgencyName: string;
+    owningAgencyName?: string;
     openDate: string;
     closeDate: string;
     closeDateExplanation?: string;
-    oppStatus: string;
-    docType: string;
-    fundingInstrumentType: string;
-    categoryOfFunding: string;
+    oppStatus?: string;
+    docType?: string;
+    fundingInstrumentType?: string;
+    categoryOfFunding?: string;
     expectedNumberOfAwards?: number;
     awardCeiling?: number;
     awardFloor?: number;
     estimatedTotalProgramFunding?: number;
-    costSharing: boolean;
-    eligibleApplicants: string[];
+    costSharing?: boolean;
+    eligibleApplicants?: string[];
     additionalEligibilityInfo?: string;
-    agencyCode: string;
+    agencyCode?: string;
     cfdaList?: Array<{
         cfdaNumber: string;
-        programTitle: string;
+        programTitle?: string;
     }>;
     synopsis?: {
         synopsisDesc: string;
+        applicantEligibilityDesc?: string;
     };
 }
 
 export interface GrantsGovSearchResponse {
-    totalCount: number;
-    opportunities: GrantsGovOpportunity[];
+    oppHits: GrantsGovSearchHit[];
+    rowCount: number;
 }
 
 // ============================================

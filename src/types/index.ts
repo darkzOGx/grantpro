@@ -20,6 +20,8 @@ export interface GrantWithScore {
     matchScore?: number;
     applicationStatus?: ApplicationStatus;
     autoApplyEnabled?: boolean;
+    sourceUrl?: string | null;
+    applicationUrl?: string | null;
 }
 
 export interface ApplicationWithDetails {

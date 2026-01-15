@@ -43,6 +43,14 @@ export function normalizeGrantsGovOpportunity(
         deadline = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
     }
 
+    // Generate appropriate URL based on ID format
+    // UUIDs (from Simpler API) use simpler.grants.gov
+    // Numeric IDs (from legacy API) use grants.gov
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(opp.opportunityId);
+    const grantUrl = isUUID
+        ? `https://simpler.grants.gov/opportunity/${opp.opportunityId}`
+        : `https://www.grants.gov/search-results-detail/${opp.opportunityId}`;
+
     return {
         title: opp.opportunityTitle,
         category,
@@ -51,17 +59,17 @@ export function normalizeGrantsGovOpportunity(
         fundingAmountMax,
         deadline,
         externalId: opp.opportunityId,
-        sourceUrl: `https://www.grants.gov/search-results-detail/${opp.opportunityId}`,
+        sourceUrl: grantUrl,
         cfda,
         agencyCode: opp.agencyCode || opp.owningAgencyCode,
         description: opp.synopsis?.synopsisDesc,
         eligibilityCriteria: [
-            ...opp.eligibleApplicants,
+            ...(opp.eligibleApplicants || []),
             opp.additionalEligibilityInfo,
         ]
             .filter(Boolean)
             .join("\n"),
-        applicationUrl: `https://www.grants.gov/search-results-detail/${opp.opportunityId}`,
+        applicationUrl: grantUrl,
         requirements: {
             eligibleApplicants: opp.eligibleApplicants,
             fundingInstrumentType: opp.fundingInstrumentType,

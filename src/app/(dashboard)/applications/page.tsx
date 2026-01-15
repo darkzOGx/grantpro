@@ -1,10 +1,5 @@
-"use client";
-
-import {
-    ApplicationStatus,
-    STATUS_LABELS,
-    CATEGORY_LABELS,
-} from "@/types";
+import { getApplications } from "@/lib/actions/applications";
+import { ApplicationStatus, STATUS_LABELS, CATEGORY_LABELS } from "@/types";
 import { SuitabilityBadge } from "@/components/grants";
 import { formatCurrency, formatDate, cn } from "@/lib/utils";
 import {
@@ -15,70 +10,6 @@ import {
     Zap,
     ArrowRight,
 } from "lucide-react";
-
-interface Application {
-    id: string;
-    status: ApplicationStatus;
-    matchScore: number;
-    autoApplyEnabled: boolean;
-    submittedAt: string | null;
-    grant: {
-        id: string;
-        title: string;
-        category: string;
-        fundingAmountMin: number;
-        fundingAmountMax: number;
-        deadline: string;
-    };
-}
-
-const MOCK_APPLICATIONS: Application[] = [
-    {
-        id: "app-1",
-        status: "WON",
-        matchScore: 92,
-        autoApplyEnabled: false,
-        submittedAt: "2025-11-15",
-        grant: {
-            id: "title-i-school-improvement",
-            title: "Title I School Improvement Grant",
-            category: "FEDERAL",
-            fundingAmountMin: 500000,
-            fundingAmountMax: 2000000,
-            deadline: "2026-03-15",
-        },
-    },
-    {
-        id: "app-2",
-        status: "READY_FOR_REVIEW",
-        matchScore: 88,
-        autoApplyEnabled: true,
-        submittedAt: null,
-        grant: {
-            id: "usda-fresh-fruit-vegetable",
-            title: "USDA Fresh Fruit and Vegetable Program",
-            category: "NUTRITION",
-            fundingAmountMin: 50000,
-            fundingAmountMax: 200000,
-            deadline: "2026-02-28",
-        },
-    },
-    {
-        id: "app-3",
-        status: "DRAFTING",
-        matchScore: 78,
-        autoApplyEnabled: true,
-        submittedAt: null,
-        grant: {
-            id: "gates-stem-initiative",
-            title: "Gates Foundation K-12 STEM Initiative",
-            category: "STEM",
-            fundingAmountMin: 100000,
-            fundingAmountMax: 500000,
-            deadline: "2026-05-01",
-        },
-    },
-];
 
 const STATUS_CONFIG: Record<
     ApplicationStatus,
@@ -116,16 +47,8 @@ const STATUS_CONFIG: Record<
     },
 };
 
-export default function ApplicationsPage() {
-    // Group applications by status
-    const applicationsByStatus = MOCK_APPLICATIONS.reduce(
-        (acc, app) => {
-            if (!acc[app.status]) acc[app.status] = [];
-            acc[app.status].push(app);
-            return acc;
-        },
-        {} as Record<ApplicationStatus, Application[]>
-    );
+export default async function ApplicationsPage() {
+    const applications = await getApplications();
 
     return (
         <div className="space-y-6">
@@ -139,7 +62,7 @@ export default function ApplicationsPage() {
                 </div>
                 <div className="flex items-center gap-2 text-sm">
                     <span className="text-gray-500">
-                        {MOCK_APPLICATIONS.length} total applications
+                        {applications.length} total applications
                     </span>
                 </div>
             </div>
@@ -149,7 +72,7 @@ export default function ApplicationsPage() {
                 <StatCard
                     label="In Progress"
                     value={
-                        MOCK_APPLICATIONS.filter((a) =>
+                        applications.filter((a) =>
                             ["PENDING_DATA", "DRAFTING", "READY_FOR_REVIEW"].includes(a.status)
                         ).length
                     }
@@ -158,18 +81,23 @@ export default function ApplicationsPage() {
                 <StatCard
                     label="Submitted"
                     value={
-                        MOCK_APPLICATIONS.filter((a) => a.status === "SUBMITTED").length
+                        applications.filter((a) => a.status === "SUBMITTED").length
                     }
                     color="purple"
                 />
                 <StatCard
                     label="Won"
-                    value={MOCK_APPLICATIONS.filter((a) => a.status === "WON").length}
+                    value={applications.filter((a) => a.status === "WON").length}
                     color="green"
                 />
                 <StatCard
                     label="Success Rate"
-                    value="75%"
+                    value={(() => {
+                        const completed = applications.filter((a) => a.status === "WON" || a.status === "LOST");
+                        if (completed.length === 0) return "N/A";
+                        const won = applications.filter((a) => a.status === "WON").length;
+                        return `${Math.round((won / completed.length) * 100)}%`;
+                    })()}
                     color="primary"
                     isPercentage
                 />
@@ -201,7 +129,7 @@ export default function ApplicationsPage() {
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
-                        {MOCK_APPLICATIONS.map((app) => {
+                        {applications.map((app) => {
                             const statusConfig = STATUS_CONFIG[app.status];
                             const StatusIcon = statusConfig.icon;
 
@@ -217,7 +145,7 @@ export default function ApplicationsPage() {
                                             </div>
                                             <div className="text-sm text-gray-500">
                                                 {CATEGORY_LABELS[app.grant.category as keyof typeof CATEGORY_LABELS]} •
-                                                Due {formatDate(app.grant.deadline)}
+                                                Due {formatDate(new Date(app.grant.deadline))}
                                             </div>
                                         </div>
                                     </td>
@@ -294,6 +222,7 @@ function StatCard({
         green: "text-green-700",
         primary: "text-primary-700",
     };
+
 
     return (
         <div

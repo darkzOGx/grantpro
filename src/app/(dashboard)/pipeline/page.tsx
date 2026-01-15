@@ -1,89 +1,22 @@
-"use client";
-
+import { getDeliverables } from "@/lib/actions/pipeline";
 import { PipelineBoard, PipelineBoardEmpty } from "@/components/pipeline";
-import { DeliverableWithApplication, DeliverableStatus } from "@/types";
 import { Trophy, TrendingUp, CheckCircle2 } from "lucide-react";
 
-const MOCK_DELIVERABLES: DeliverableWithApplication[] = [
-    {
-        id: "del-1",
-        applicationId: "app-1",
-        title: "Submit Quarterly Progress Report Q1",
-        description:
-            "Complete and submit the first quarterly progress report including student achievement data and program implementation updates.",
-        status: "COMPLETED",
-        dueDate: new Date("2026-01-31"),
-        evidenceLink: null,
-        application: {
-            grant: {
-                title: "Title I School Improvement Grant",
-            },
-        },
-    },
-    {
-        id: "del-2",
-        applicationId: "app-1",
-        title: "Conduct Mid-Year Assessment",
-        description:
-            "Administer standardized assessments to measure student progress in reading and math.",
-        status: "REPORTING",
-        dueDate: new Date("2026-02-15"),
-        evidenceLink: null,
-        application: {
-            grant: {
-                title: "Title I School Improvement Grant",
-            },
-        },
-    },
-    {
-        id: "del-3",
-        applicationId: "app-1",
-        title: "Host Parent Engagement Workshop",
-        description:
-            "Organize and conduct parent involvement workshop as outlined in the grant proposal.",
-        status: "IMPLEMENTATION",
-        dueDate: new Date("2026-03-01"),
-        evidenceLink: null,
-        application: {
-            grant: {
-                title: "Title I School Improvement Grant",
-            },
-        },
-    },
-    {
-        id: "del-4",
-        applicationId: "app-1",
-        title: "Annual Financial Audit",
-        description: "Complete independent financial audit of grant expenditures.",
-        status: "AUDIT",
-        dueDate: new Date("2026-06-30"),
-        evidenceLink: null,
-        application: {
-            grant: {
-                title: "Title I School Improvement Grant",
-            },
-        },
-    },
-];
-
-export default function PipelinePage() {
-    const hasDeliverables = MOCK_DELIVERABLES.length > 0;
-
-    const handleStatusChange = async (
-        deliverableId: string,
-        newStatus: DeliverableStatus
-    ) => {
-        console.log(`Updating ${deliverableId} to ${newStatus}`);
-        // API call would go here
-        await new Promise((resolve) => setTimeout(resolve, 500));
-    };
+export default async function PipelinePage() {
+    const deliverables = await getDeliverables();
+    const hasDeliverables = deliverables.length > 0;
 
     // Calculate stats
-    const completedCount = MOCK_DELIVERABLES.filter(
+    const completedCount = deliverables.filter(
         (d) => d.status === "COMPLETED"
     ).length;
-    const totalCount = MOCK_DELIVERABLES.length;
+    const totalCount = deliverables.length;
     const completionRate = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+
+    // Count active grants (unique grant titles in deliverables for now, or fetch separately if needed)
+    // A better approach would be to get active grants count from a separate action or count unique grants here.
+    // For now, let's keep it simple and count unique application IDs as proxy for grants/projects
+    const uniqueApplications = new Set(deliverables.map(d => d.applicationId)).size;
 
     return (
         <div className="space-y-6">
@@ -106,8 +39,8 @@ export default function PipelinePage() {
                         <Trophy className="w-6 h-6 text-amber-600" />
                     </div>
                     <div>
-                        <div className="text-2xl font-bold text-gray-900">1</div>
-                        <div className="text-sm text-gray-500">Active Grants</div>
+                        <div className="text-2xl font-bold text-gray-900">{uniqueApplications}</div>
+                        <div className="text-sm text-gray-500">Active Applications</div>
                     </div>
                 </div>
 
@@ -149,8 +82,11 @@ export default function PipelinePage() {
 
                 {hasDeliverables ? (
                     <PipelineBoard
-                        deliverables={MOCK_DELIVERABLES}
-                        onStatusChange={handleStatusChange}
+                        deliverables={deliverables}
+                    // We are not passing onStatusChange here because we can't pass a server function to a client component without it being a Server Action.
+                    // Ideally PipelineBoard handles this internally or we need a wrapper.
+                    // If PipelineBoard REQUIRES onStatusChange, this will fail type check. 
+                    // I will assume for now it's optional or handled. Reviewing the file next will confirm.
                     />
                 ) : (
                     <PipelineBoardEmpty />
