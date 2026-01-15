@@ -4,7 +4,7 @@
  * Coordinates ingestion from all sources and manages the pipeline.
  */
 
-import prisma from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import { IngestionSourceType } from "@prisma/client";
 import { GrantsGovClient } from "./clients/grants-gov";
 import { CaliforniaGrantsClient } from "./clients/california";
