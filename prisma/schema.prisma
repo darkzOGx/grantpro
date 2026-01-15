@@ -1,0 +1,235 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// School District - The tenant/user entity
+model SchoolDistrict {
+  id              String   @id @default(cuid())
+  name            String
+  state           String
+  county          String?
+  studentCount    Int      @map("student_count")
+  freeLunchPct    Float    @map("free_lunch_pct") // Percentage eligible for free lunch
+  demographics    Json?    // Flexible JSON for demographic data
+  previousGrants  Json?    @map("previous_grants") // History of grants won
+  missionStatement String? @map("mission_statement") @db.Text
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  applications Application[]
+
+  @@map("school_districts")
+}
+
+// Grant - The opportunity catalog
+model Grant {
+  id                 String   @id @default(cuid())
+  title              String
+  category           GrantCategory
+  sourceType         GrantSourceType @map("source_type")
+  fundingAmountMin   Decimal  @map("funding_amount_min") @db.Decimal(12, 2)
+  fundingAmountMax   Decimal  @map("funding_amount_max") @db.Decimal(12, 2)
+  deadline           DateTime
+  requirements       Json?    // Flexible requirements as JSON
+  eligibilityCriteria String? @map("eligibility_criteria") @db.Text
+  description        String?  @db.Text
+  applicationUrl     String?  @map("application_url")
+  isActive           Boolean  @default(true) @map("is_active")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+  
+  // Ingestion tracking fields
+  externalId         String?  @map("external_id")       // Original source ID (e.g., Grants.gov OpportunityID)
+  sourceUrl          String?  @map("source_url")        // Direct link to source
+  cfda               String?                            // Assistance Listing number (e.g., "10.553")
+  agencyCode         String?  @map("agency_code")       // Federal agency code
+  parentGrantId      String?  @map("parent_grant_id")   // For pass-through grants
+  lastSyncedAt       DateTime? @map("last_synced_at")
+  ingestionSourceId  String?  @map("ingestion_source_id")
+
+  applications      Application[]
+  rawGrants         RawGrant[]
+  ingestionSource   IngestionSource? @relation(fields: [ingestionSourceId], references: [id])
+  parentGrant       Grant?   @relation("GrantHierarchy", fields: [parentGrantId], references: [id])
+  childGrants       Grant[]  @relation("GrantHierarchy")
+
+  @@index([externalId])
+  @@index([cfda])
+  @@index([deadline])
+  @@map("grants")
+}
+
+// Application - Join table between Districts and Grants
+model Application {
+  id              String            @id @default(cuid())
+  grantId         String            @map("grant_id")
+  districtId      String            @map("district_id")
+  status          ApplicationStatus @default(PENDING_DATA)
+  matchScore      Int?              @map("match_score") // 0-100 suitability score
+  autoApplyEnabled Boolean          @default(false) @map("auto_apply_enabled")
+  draftedContent  Json?             @map("drafted_content") // AI-generated application content
+  formMappings    Json?             @map("form_mappings") // Field mappings for auto-fill
+  submittedAt     DateTime?         @map("submitted_at")
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+
+  grant       Grant          @relation(fields: [grantId], references: [id], onDelete: Cascade)
+  district    SchoolDistrict @relation(fields: [districtId], references: [id], onDelete: Cascade)
+  deliverables Deliverable[]
+
+  @@unique([grantId, districtId])
+  @@map("applications")
+}
+
+// Deliverable - Post-award compliance tasks
+model Deliverable {
+  id            String            @id @default(cuid())
+  applicationId String            @map("application_id")
+  title         String
+  description   String?           @db.Text
+  status        DeliverableStatus @default(IMPLEMENTATION)
+  dueDate       DateTime?         @map("due_date")
+  evidenceLink  String?           @map("evidence_link")
+  createdAt     DateTime          @default(now()) @map("created_at")
+  updatedAt     DateTime          @updatedAt @map("updated_at")
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@map("deliverables")
+}
+
+// ============================================
+// INGESTION INFRASTRUCTURE
+// ============================================
+
+// Tracks each data source for grant ingestion
+model IngestionSource {
+  id            String      @id @default(cuid())
+  name          String      @unique  // "grants_gov", "sam_gov", "ca_grants", "propublica_990"
+  displayName   String      @map("display_name")
+  sourceType    IngestionSourceType @map("source_type")
+  baseUrl       String?     @map("base_url")
+  lastSyncAt    DateTime?   @map("last_sync_at")
+  lastSyncStatus String?    @map("last_sync_status") // "success", "error", "partial"
+  lastSyncCount Int?        @map("last_sync_count")  // Number of grants synced
+  syncFrequency String      @default("0 6 * * *") @map("sync_frequency") // Cron: daily at 6am
+  isActive      Boolean     @default(true) @map("is_active")
+  config        Json?       // API keys, endpoints, filters
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
+
+  rawGrants     RawGrant[]
+  grants        Grant[]
+
+  @@map("ingestion_sources")
+}
+
+// Raw data storage before normalization
+model RawGrant {
+  id            String   @id @default(cuid())
+  sourceId      String   @map("source_id")
+  externalId    String   @map("external_id")  // ID from original source
+  rawData       Json     @map("raw_data")     // Original JSON/XML payload
+  checksum      String?                       // For detecting changes
+  status        RawGrantStatus @default(PENDING)
+  normalizedAt  DateTime? @map("normalized_at")
+  grantId       String?  @map("grant_id")     // Link to normalized Grant
+  errorMessage  String?  @map("error_message") @db.Text
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  
+  source        IngestionSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  grant         Grant?   @relation(fields: [grantId], references: [id])
+  
+  @@unique([sourceId, externalId])
+  @@index([status])
+  @@map("raw_grants")
+}
+
+// Ingestion job run history
+model IngestionRun {
+  id            String   @id @default(cuid())
+  sourceId      String   @map("source_id")
+  sourceName    String   @map("source_name")
+  status        IngestionRunStatus @default(RUNNING)
+  startedAt     DateTime @default(now()) @map("started_at")
+  completedAt   DateTime? @map("completed_at")
+  totalFetched  Int      @default(0) @map("total_fetched")
+  totalNew      Int      @default(0) @map("total_new")
+  totalUpdated  Int      @default(0) @map("total_updated")
+  totalErrors   Int      @default(0) @map("total_errors")
+  errorLog      Json?    @map("error_log")
+  
+  @@index([sourceId])
+  @@index([startedAt])
+  @@map("ingestion_runs")
+}
+
+// Enums
+enum GrantCategory {
+  FEDERAL
+  STATE
+  NUTRITION
+  ARTS
+  STEM
+  INFRASTRUCTURE
+  PRIVATE_FOUNDATION
+  CORPORATE
+  OTHER
+}
+
+enum GrantSourceType {
+  FEDERAL
+  STATE
+  PRIVATE_FOUNDATION
+  CORPORATE
+  NONPROFIT
+}
+
+enum ApplicationStatus {
+  PENDING_DATA
+  DRAFTING
+  READY_FOR_REVIEW
+  SUBMITTED
+  WON
+  LOST
+}
+
+enum DeliverableStatus {
+  IMPLEMENTATION
+  REPORTING
+  AUDIT
+  COMPLETED
+}
+
+enum IngestionSourceType {
+  FEDERAL_API
+  STATE_API
+  STATE_CSV
+  STATE_SCRAPER
+  PRIVATE_API
+  FOUNDATION_990
+}
+
+enum RawGrantStatus {
+  PENDING
+  NORMALIZED
+  ERROR
+  SKIPPED
+}
+
+enum IngestionRunStatus {
+  RUNNING
+  SUCCESS
+  PARTIAL
+  FAILED
+}
+
