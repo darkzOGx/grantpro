@@ -13,7 +13,7 @@ export default async function DashboardLayout({
         <div className="min-h-screen bg-gray-50">
             <Sidebar district={district} />
 
-            <div className="pl-64">
+            <div className="pl-[var(--sidebar-width)] transition-[padding] duration-300 ease-in-out">
                 <DashboardHeader />
                 <main className="p-6">{children}</main>
             </div>

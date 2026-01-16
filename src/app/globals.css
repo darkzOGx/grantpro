@@ -4,47 +4,181 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
-:root {
-  --background: #ffffff;
-  --foreground: #0f172a;
-}
-
-@media (prefers-color-scheme: dark) {
+@layer base {
   :root {
-    --background: #0f172a;
-    --foreground: #f8fafc;
+    /* Light Mode (Default) */
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
+
+    --primary: 240 5.9% 10%;
+    --primary-foreground: 0 0% 98%;
+
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5.9% 10%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 240 10% 3.9%;
+
+    --radius: 0.5rem;
+  }
+
+  [data-theme="dark"] {
+    --background: 222 47% 11%;
+    /* slate-900 */
+    --foreground: 210 40% 98%;
+
+    --card: 222 47% 11%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222 47% 11%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 210 40% 98%;
+    --primary-foreground: 222 47.4% 11.2%;
+
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+  }
+
+  [data-theme="royal"] {
+    /* Royal Mode (Apptegy-Inspired Plum Palette) */
+    --background: 300 13% 98%;
+    /* Light royal background #fdf8fb */
+    --foreground: 324 40% 10%;
+    /* Very dark plum text */
+
+    --card: 300 20% 99%;
+    /* Very light plum tint */
+    --card-foreground: 324 40% 10%;
+
+    --popover: 300 20% 99%;
+    --popover-foreground: 324 40% 10%;
+
+    --primary: 315 41% 30%;
+    /* #6b2d5b Primary Plum */
+    --primary-foreground: 312 30% 98%;
+    /* Text Light */
+
+    --secondary: 313 25% 93%;
+    /* #f5e6f0 Plum Tint */
+    --secondary-foreground: 315 41% 30%;
+
+    --muted: 313 25% 93%;
+    --muted-foreground: 315 20% 40%;
+
+    --accent: 313 25% 93%;
+    --accent-foreground: 315 41% 30%;
+
+    --destructive: 351 53% 54%;
+    /* #c94a5c */
+    --destructive-foreground: 312 30% 98%;
+
+    --border: 317 33% 74%;
+    /* #d4a5c9 Plum Muted */
+    --input: 317 33% 74%;
+    --ring: 315 41% 30%;
+
+    /* Specific Royal Accents */
+    --royal-gold: 45 68% 47%;
+    /* #c9a227 */
+    --royal-plum-light: 318 26% 49%;
+    /* #9d5c8a */
+  }
+
+  [data-theme="royal-dark"] {
+    /* Optional: Dark variant of Royal Mode if needed later, or can be folded into 'royal' if dark background preferred */
+    --background: 300 44% 7%;
+    /* #1a0a14 Dark Background */
+    --foreground: 312 30% 98%;
+    /* #fdf2f9 */
+
+    --card: 300 33% 18%;
+    /* #3d1f32 */
+    --card-foreground: 312 30% 98%;
+
+    --popover: 300 33% 18%;
+    --popover-foreground: 312 30% 98%;
+
+    --primary: 315 41% 30%;
+    /* #6b2d5b */
+    --primary-foreground: 312 30% 98%;
+
+    --secondary: 300 20% 20%;
+    --secondary-foreground: 312 30% 98%;
+
+    --muted: 300 20% 20%;
+    --muted-foreground: 317 33% 74%;
+
+    --accent: 300 20% 20%;
+    --accent-foreground: 312 30% 98%;
+
+    --destructive: 351 53% 54%;
+    --destructive-foreground: 312 30% 98%;
+
+    --border: 315 41% 30%;
+    --input: 315 41% 30%;
+    --ring: 45 68% 47%;
+  }
+
+  :root {
+    --sidebar-width: 16rem;
+    /* 256px */
+  }
+
+  * {
+    border-color: hsl(var(--border));
+  }
+
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
   }
 }
 
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: 'Inter', system-ui, sans-serif;
-}
+/* Base Utility Classes for Animation */
+@layer utilities {
+  .animate-in {
+    animation: animate-in 0.3s ease-out;
+  }
 
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
+  @keyframes animate-in {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
 
-::-webkit-scrollbar-track {
-  background: #f1f5f9;
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
-}
-
-/* Smooth transitions */
-* {
-  transition-property: background-color, border-color, color, fill, stroke;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 150ms;
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
 }

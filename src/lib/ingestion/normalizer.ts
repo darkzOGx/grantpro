@@ -189,6 +189,155 @@ function inferCategoryFromCaliforniaCategories(
 }
 
 /**
+ * Normalize a USAspending.gov award to our internal schema
+ * Used for historical funding data and benchmarking
+ */
+export function normalizeUSAspendingAward(
+    award: USAspendingAward
+): NormalizedGrant {
+    // Infer category from CFDA number
+    let category: GrantCategory = "FEDERAL";
+    if (award["CFDA Number"]) {
+        category = inferCategoryFromCFDA(award["CFDA Number"]);
+    }
+
+    // Parse dates
+    let deadline: Date;
+    try {
+        deadline = award["End Date"]
+            ? new Date(award["End Date"])
+            : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+    } catch {
+        deadline = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+    }
+
+    const fundingAmount = award["Award Amount"] || 0;
+
+    return {
+        title: `${award["Recipient Name"]} - ${award["CFDA Number"] || "Federal Award"}`,
+        category,
+        sourceType: "FEDERAL" as GrantSourceType,
+        fundingAmountMin: fundingAmount,
+        fundingAmountMax: fundingAmount,
+        deadline,
+        externalId: award["Award ID"],
+        sourceUrl: `https://www.usaspending.gov/award/${award["Award ID"]}`,
+        cfda: award["CFDA Number"],
+        agencyCode: award["Awarding Agency"],
+        description: award.Description,
+        eligibilityCriteria: undefined,
+        applicationUrl: undefined,
+        requirements: {
+            awardType: award["Award Type"],
+            subAgency: award["Awarding Sub Agency"],
+            totalOutlays: award["Total Outlays"],
+        },
+        isActive: false, // Historical awards
+    };
+}
+
+/**
+ * Normalize an NSF Award to our internal schema
+ */
+export function normalizeNSFAward(award: NSFAward): NormalizedGrant {
+    // Parse funding amount
+    const fundingAmount = parseInt(award.estimatedTotalAmt || "0", 10);
+
+    // Parse deadline (use expiration date)
+    let deadline: Date;
+    try {
+        if (award.expDate) {
+            // NSF dates are MM/DD/YYYY
+            const parts = award.expDate.split("/");
+            deadline = new Date(`${parts[2]}-${parts[0]}-${parts[1]}`);
+        } else {
+            deadline = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+        }
+    } catch {
+        deadline = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+    }
+
+    const piName = [award.piFirstName, award.piLastName].filter(Boolean).join(" ");
+
+    return {
+        title: award.title,
+        category: "STEM" as GrantCategory, // All NSF awards are STEM
+        sourceType: "FEDERAL" as GrantSourceType,
+        fundingAmountMin: fundingAmount,
+        fundingAmountMax: fundingAmount,
+        deadline,
+        externalId: award.id,
+        sourceUrl: `https://www.nsf.gov/awardsearch/showAward?AWD_ID=${award.id}`,
+        cfda: "47.076", // NSF Education and Human Resources
+        agencyCode: "NSF",
+        description: award.abstractText,
+        eligibilityCriteria: undefined,
+        applicationUrl: undefined,
+        requirements: {
+            awardee: award.awardeeName,
+            awardeeLocation: `${award.awardeeCity}, ${award.awardeeStateCode}`,
+            principalInvestigator: piName,
+            piEmail: award.piEmail,
+            programName: award.fundProgramName || award.primaryProgram,
+        },
+        isActive: deadline > new Date(),
+    };
+}
+
+/**
+ * Normalize a ProPublica foundation to a funder profile
+ * Foundations aren't grants themselves, but we track them as potential funders
+ */
+export function normalizeProPublicaFoundation(
+    org: ProPublicaOrganization,
+    avgGiving?: number
+): NormalizedGrant {
+    // Estimate funding: use giving data if available, 
+    // otherwise estimate 5% of assets (typical foundation payout rate)
+    // or fall back to revenue
+    const estimatedGiving = avgGiving ||
+        (org.asset_amount ? Math.round(org.asset_amount * 0.05) : 0) ||
+        org.income_amount ||
+        0;
+
+    // Set a reasonable min (typical small grant) and max (estimated giving capacity)
+    const fundingMin = estimatedGiving > 0 ? Math.min(1000, estimatedGiving) : 0;
+    const fundingMax = estimatedGiving;
+
+    // Foundations don't have deadlines - set far future
+    const deadline = new Date(Date.now() + 2 * 365 * 24 * 60 * 60 * 1000);
+
+    return {
+        title: org.name,
+        category: "PRIVATE_FOUNDATION" as GrantCategory,
+        sourceType: "PRIVATE_FOUNDATION" as GrantSourceType,
+        fundingAmountMin: fundingMin,
+        fundingAmountMax: fundingMax,
+        deadline,
+        externalId: String(org.ein),
+        sourceUrl: `https://projects.propublica.org/nonprofits/organizations/${org.ein}`,
+        cfda: undefined,
+        agencyCode: undefined,
+        description: `Private foundation based in ${org.city}, ${org.state}. NTEE Code: ${org.ntee_code || "Unknown"}`,
+        eligibilityCriteria: undefined,
+        applicationUrl: undefined,
+        requirements: {
+            nteeCode: org.ntee_code,
+            assets: org.asset_amount,
+            annualRevenue: org.revenue_amount,
+        },
+        isActive: true,
+    };
+}
+
+// Import new types
+import {
+    USAspendingAward,
+    NSFAward,
+    ProPublicaOrganization,
+} from "./types";
+
+/**
  * Generate a checksum for detecting grant changes
  */
 export function generateGrantChecksum(grant: NormalizedGrant): string {

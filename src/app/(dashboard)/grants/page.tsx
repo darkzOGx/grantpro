@@ -1,4 +1,4 @@
-import { getGrants } from "@/lib/actions/grants";
+import { getGrants, SortOption } from "@/lib/actions/grants";
 import { GrantCard, GrantsFilters } from "@/components/grants";
 import { GrantCategory } from "@/types";
 import { Search } from "lucide-react";
@@ -6,7 +6,7 @@ import { Search } from "lucide-react";
 export default async function GrantsPage({
     searchParams,
 }: {
-    searchParams: { search?: string; category?: string | string[] };
+    searchParams: { search?: string; category?: string | string[]; sort?: string };
 }) {
     const search = searchParams.search;
     const categories = searchParams.category
@@ -14,8 +14,9 @@ export default async function GrantsPage({
             ? searchParams.category
             : [searchParams.category]) as GrantCategory[]
         : undefined;
+    const sortBy = (searchParams.sort || "deadline") as SortOption;
 
-    const grants = await getGrants({ search, categories });
+    const grants = await getGrants({ search, categories, sortBy });
 
     return (
         <div className="space-y-6">

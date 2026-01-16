@@ -1,10 +1,10 @@
 "use client";
 
 import { GrantCategory, CATEGORY_LABELS } from "@/types";
-import { Search, SlidersHorizontal, X } from "lucide-react";
+import { Search, X, ArrowUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useTransition } from "react";
 import { useDebouncedCallback } from "use-debounce";
 
 const CATEGORIES: GrantCategory[] = [
@@ -18,15 +18,21 @@ const CATEGORIES: GrantCategory[] = [
     "CORPORATE",
 ];
 
+const SORT_OPTIONS = [
+    { value: "deadline", label: "Due Date (Soonest)" },
+    { value: "value_desc", label: "Highest Value" },
+    { value: "value_asc", label: "Lowest Value" },
+];
+
 export function GrantsFilters() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const [isPending, startTransition] = useTransition();
-    const [showFilters, setShowFilters] = useState(false);
 
     // Initial State from URL
     const currentSearch = searchParams.get("search") || "";
     const currentCategories = searchParams.getAll("category") as GrantCategory[];
+    const currentSort = searchParams.get("sort") || "deadline";
 
     // Debounced Search
     const handleSearch = useDebouncedCallback((term: string) => {
@@ -61,6 +67,18 @@ export function GrantsFilters() {
         });
     };
 
+    const handleSort = (sortValue: string) => {
+        const params = new URLSearchParams(searchParams);
+        if (sortValue && sortValue !== "deadline") {
+            params.set("sort", sortValue);
+        } else {
+            params.delete("sort");
+        }
+        startTransition(() => {
+            router.replace(`?${params.toString()}`);
+        });
+    };
+
     const clearFilters = () => {
         router.push("/grants");
     };
@@ -68,7 +86,7 @@ export function GrantsFilters() {
     const hasActiveFilters = currentSearch !== "" || currentCategories.length > 0;
 
     return (
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
+        <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-4">
             <div className="flex items-center gap-4">
                 {/* Search Input */}
                 <div className="flex-1 relative">
@@ -82,24 +100,21 @@ export function GrantsFilters() {
                     />
                 </div>
 
-                {/* Filter Toggle */}
-                <button
-                    onClick={() => setShowFilters(!showFilters)}
-                    className={cn(
-                        "flex items-center gap-2 px-4 py-2.5 rounded-lg border font-medium text-sm transition-colors",
-                        showFilters
-                            ? "bg-primary-50 border-primary-200 text-primary-700"
-                            : "border-gray-200 text-gray-600 hover:bg-gray-50"
-                    )}
-                >
-                    <SlidersHorizontal className="w-4 h-4" />
-                    Filters
-                    {currentCategories.length > 0 && (
-                        <span className="bg-primary-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                            {currentCategories.length}
-                        </span>
-                    )}
-                </button>
+                {/* Sort Dropdown */}
+                <div className="flex items-center gap-2">
+                    <ArrowUpDown className="w-4 h-4 text-gray-400" />
+                    <select
+                        value={currentSort}
+                        onChange={(e) => handleSort(e.target.value)}
+                        className="px-3 py-2.5 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 outline-none cursor-pointer"
+                    >
+                        {SORT_OPTIONS.map((option) => (
+                            <option key={option.value} value={option.value}>
+                                {option.label}
+                            </option>
+                        ))}
+                    </select>
+                </div>
 
                 {/* Clear Filters */}
                 {hasActiveFilters && (
@@ -113,30 +128,26 @@ export function GrantsFilters() {
                 )}
             </div>
 
-            {/* Category Filters */}
-            {showFilters && (
-                <div className="mt-4 pt-4 border-t border-gray-100">
-                    <div className="text-sm font-medium text-gray-700 mb-3">
-                        Filter by Category
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                        {CATEGORIES.map((category) => (
-                            <button
-                                key={category}
-                                onClick={() => toggleCategory(category)}
-                                className={cn(
-                                    "px-3 py-1.5 rounded-full text-sm font-medium transition-colors",
-                                    currentCategories.includes(category)
-                                        ? "bg-primary-600 text-white"
-                                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                                )}
-                            >
-                                {CATEGORY_LABELS[category]}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            )}
+            {/* Category Filters - Always Visible */}
+            <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm font-medium text-gray-500 mr-2">
+                    Filter by Category:
+                </span>
+                {CATEGORIES.map((category) => (
+                    <button
+                        key={category}
+                        onClick={() => toggleCategory(category)}
+                        className={cn(
+                            "px-3 py-1.5 rounded-full text-sm font-medium transition-colors",
+                            currentCategories.includes(category)
+                                ? "bg-primary-600 text-white"
+                                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                        )}
+                    >
+                        {CATEGORY_LABELS[category]}
+                    </button>
+                ))}
+            </div>
         </div>
     );
 }

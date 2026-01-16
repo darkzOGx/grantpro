@@ -155,6 +155,68 @@ export interface ProPublicaGrant {
 }
 
 // ============================================
+// USAspending.gov Types
+// ============================================
+
+export interface USAspendingSearchParams {
+    page?: number;
+    limit?: number;
+    startDate?: string;
+    endDate?: string;
+    timePeriod?: { start_date: string; end_date: string }[];
+    sort?: string;
+    order?: "asc" | "desc";
+}
+
+export interface USAspendingAward {
+    "Award ID": string;
+    "Recipient Name": string;
+    "Award Amount": number;
+    "Total Outlays"?: number;
+    Description?: string;
+    "Start Date"?: string;
+    "End Date"?: string;
+    "Awarding Agency"?: string;
+    "Awarding Sub Agency"?: string;
+    "Award Type"?: string;
+    "CFDA Number"?: string;
+    recipient_id?: string;
+}
+
+// ============================================
+// NSF Awards API Types
+// ============================================
+
+export interface NSFSearchParams {
+    keyword?: string;
+    fundProgramName?: string;
+    dateStart?: string; // MM/DD/YYYY
+    dateEnd?: string;
+    offset?: number;
+    resultsPerPage?: number;
+}
+
+export interface NSFAward {
+    id: string;
+    title: string;
+    abstractText?: string;
+    awardeeName: string;
+    awardeeCity?: string;
+    awardeeStateCode?: string;
+    startDate?: string;
+    expDate?: string;
+    estimatedTotalAmt?: string;
+    fundsObligatedAmt?: string;
+    piFirstName?: string;
+    piLastName?: string;
+    piEmail?: string;
+    coPDPI?: string;
+    fundProgramName?: string;
+    primaryProgram?: string;
+    projectOutComesReport?: string;
+}
+
+// ============================================
 // Normalized Grant Types (Internal)
 // ============================================
 

@@ -80,8 +80,13 @@ export function GrantCard({ grant, applicationId, onViewDetails }: GrantCardProp
                 <div className="flex items-center gap-2 text-sm">
                     <DollarSign className="w-4 h-4 text-gray-400" />
                     <span className="text-gray-700 font-medium">
-                        {formatCurrency(Number(grant.fundingAmountMin))} -{" "}
-                        {formatCurrency(Number(grant.fundingAmountMax))}
+                        {Number(grant.fundingAmountMin) === 0 && Number(grant.fundingAmountMax) === 0 ? (
+                            "Contact for details"
+                        ) : Number(grant.fundingAmountMin) === Number(grant.fundingAmountMax) ? (
+                            formatCurrency(Number(grant.fundingAmountMax))
+                        ) : (
+                            `${formatCurrency(Number(grant.fundingAmountMin))} - ${formatCurrency(Number(grant.fundingAmountMax))}`
+                        )}
                     </span>
                 </div>
 

@@ -4,12 +4,16 @@ import { prisma } from "@/lib/prisma";
 import { GrantCategory, GrantWithScore } from "@/types";
 import { Prisma } from "@prisma/client";
 
+export type SortOption = "deadline" | "value_desc" | "value_asc";
+
 export async function getGrants({
     search,
     categories,
+    sortBy = "deadline",
 }: {
     search?: string;
     categories?: GrantCategory[];
+    sortBy?: SortOption;
 } = {}) {
     const where: Prisma.GrantWhereInput = {
         isActive: true,
@@ -28,9 +32,24 @@ export async function getGrants({
         where.category = { in: categories };
     }
 
+    // Determine sort order
+    let orderBy: Prisma.GrantOrderByWithRelationInput;
+    switch (sortBy) {
+        case "value_desc":
+            orderBy = { fundingAmountMax: "desc" };
+            break;
+        case "value_asc":
+            orderBy = { fundingAmountMax: "asc" };
+            break;
+        case "deadline":
+        default:
+            orderBy = { deadline: "asc" };
+            break;
+    }
+
     const grants = await prisma.grant.findMany({
         where,
-        orderBy: { createdAt: "desc" },
+        orderBy,
         include: {
             applications: {
                 select: {
@@ -55,3 +74,4 @@ export async function getGrants({
         } as GrantWithScore;
     });
 }
+

@@ -8,9 +8,15 @@ import { prisma } from "@/lib/prisma";
 import { IngestionSourceType } from "@prisma/client";
 import { GrantsGovClient } from "./clients/grants-gov";
 import { CaliforniaGrantsClient } from "./clients/california";
+import { USAspendingClient } from "./clients/usaspending";
+import { NSFAwardsClient } from "./clients/nsf-awards";
+import { ProPublicaClient } from "./clients/propublica";
 import {
     normalizeGrantsGovOpportunity,
     normalizeCaliforniaGrant,
+    normalizeUSAspendingAward,
+    normalizeNSFAward,
+    normalizeProPublicaFoundation,
     generateGrantChecksum,
 } from "./normalizer";
 import { NormalizedGrant, IngestionResult } from "./types";
@@ -18,10 +24,16 @@ import { NormalizedGrant, IngestionResult } from "./types";
 export class IngestionOrchestrator {
     private grantsGovClient: GrantsGovClient;
     private californiaClient: CaliforniaGrantsClient;
+    private usaSpendingClient: USAspendingClient;
+    private nsfAwardsClient: NSFAwardsClient;
+    private proPublicaClient: ProPublicaClient;
 
     constructor() {
         this.grantsGovClient = new GrantsGovClient();
         this.californiaClient = new CaliforniaGrantsClient();
+        this.usaSpendingClient = new USAspendingClient();
+        this.nsfAwardsClient = new NSFAwardsClient();
+        this.proPublicaClient = new ProPublicaClient();
     }
 
     /**
@@ -49,6 +61,15 @@ export class IngestionOrchestrator {
                     break;
                 case "ca_grants":
                     result = await this.ingestCaliforniaGrants(source.id);
+                    break;
+                case "usaspending":
+                    result = await this.ingestUSAspending(source.id);
+                    break;
+                case "nsf_awards":
+                    result = await this.ingestNSFAwards(source.id);
+                    break;
+                case "propublica_990":
+                    result = await this.ingestProPublicaFoundations(source.id);
                     break;
                 default:
                     throw new Error(`Unknown source: ${source.name}`);
@@ -184,6 +205,135 @@ export class IngestionOrchestrator {
     }
 
     /**
+     * Ingest historical awards from USAspending.gov
+     */
+    private async ingestUSAspending(sourceId: string): Promise<IngestionResult> {
+        const result: IngestionResult = {
+            sourceId,
+            sourceName: "usaspending",
+            totalFetched: 0,
+            totalNew: 0,
+            totalUpdated: 0,
+            totalErrors: 0,
+            errors: [],
+        };
+
+        // Fetch K-12 education awards
+        const awards = await this.usaSpendingClient.fetchK12Awards();
+        result.totalFetched = awards.length;
+
+        for (const award of awards) {
+            try {
+                const normalized = normalizeUSAspendingAward(award);
+                const saveResult = await this.saveGrant(sourceId, normalized, award);
+
+                if (saveResult === "new") {
+                    result.totalNew++;
+                } else if (saveResult === "updated") {
+                    result.totalUpdated++;
+                }
+            } catch (error) {
+                result.totalErrors++;
+                result.errors.push({
+                    externalId: award["Award ID"],
+                    message: (error as Error).message,
+                });
+            }
+        }
+
+        return result;
+    }
+
+    /**
+     * Ingest STEM education awards from NSF
+     */
+    private async ingestNSFAwards(sourceId: string): Promise<IngestionResult> {
+        const result: IngestionResult = {
+            sourceId,
+            sourceName: "nsf_awards",
+            totalFetched: 0,
+            totalNew: 0,
+            totalUpdated: 0,
+            totalErrors: 0,
+            errors: [],
+        };
+
+        // Fetch education-focused NSF awards
+        const awards = await this.nsfAwardsClient.searchEducationAwards();
+        result.totalFetched = awards.length;
+
+        for (const award of awards) {
+            try {
+                const normalized = normalizeNSFAward(award);
+                const saveResult = await this.saveGrant(sourceId, normalized, award);
+
+                if (saveResult === "new") {
+                    result.totalNew++;
+                } else if (saveResult === "updated") {
+                    result.totalUpdated++;
+                }
+            } catch (error) {
+                result.totalErrors++;
+                result.errors.push({
+                    externalId: award.id,
+                    message: (error as Error).message,
+                });
+            }
+        }
+
+        return result;
+    }
+
+    /**
+     * Ingest education foundations from ProPublica
+     */
+    private async ingestProPublicaFoundations(sourceId: string): Promise<IngestionResult> {
+        const result: IngestionResult = {
+            sourceId,
+            sourceName: "propublica_990",
+            totalFetched: 0,
+            totalNew: 0,
+            totalUpdated: 0,
+            totalErrors: 0,
+            errors: [],
+        };
+
+        // Fetch education-focused foundations
+        const foundations = await this.proPublicaClient.searchEducationFoundations();
+        result.totalFetched = foundations.length;
+
+        for (const foundation of foundations) {
+            try {
+                // Build funder profile to get giving data
+                let avgGiving: number | undefined;
+                try {
+                    const profile = await this.proPublicaClient.buildFunderProfile(foundation.ein);
+                    avgGiving = profile.avgAnnualGiving;
+                } catch {
+                    // Continue without giving data
+                }
+
+                const normalized = normalizeProPublicaFoundation(foundation, avgGiving);
+                const saveResult = await this.saveGrant(sourceId, normalized, foundation);
+
+                if (saveResult === "new") {
+                    result.totalNew++;
+                } else if (saveResult === "updated") {
+                    result.totalUpdated++;
+                }
+            } catch (error) {
+                result.totalErrors++;
+                result.errors.push({
+                    externalId: foundation.ein,
+                    message: (error as Error).message,
+                });
+            }
+        }
+
+        return result;
+    }
+
+    /**
      * Save or update a normalized grant
      */
     private async saveGrant(
@@ -303,6 +453,16 @@ export class IngestionOrchestrator {
                 displayName: "ProPublica Nonprofit Explorer",
                 sourceType: "FOUNDATION_990",
                 baseUrl: "https://projects.propublica.org/nonprofits",
+            },
+            usaspending: {
+                displayName: "USAspending.gov",
+                sourceType: "FEDERAL_API",
+                baseUrl: "https://api.usaspending.gov",
+            },
+            nsf_awards: {
+                displayName: "NSF Awards",
+                sourceType: "FEDERAL_API",
+                baseUrl: "https://api.nsf.gov",
             },
         };
 
