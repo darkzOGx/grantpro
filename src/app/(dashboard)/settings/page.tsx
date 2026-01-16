@@ -68,7 +68,10 @@ export default function SettingsPage() {
                             <Sparkles className="w-5 h-5 text-primary data-[theme=royal]:text-royal-gold" />
                         </div>
                         <div>
-                            <CardTitle className="text-lg font-semibold data-[theme=royal]:text-white">AI Profile Auto-Fill</CardTitle>
+                            <div className="flex items-center gap-2">
+                                <CardTitle className="text-lg font-semibold data-[theme=royal]:text-white">AI Profile Auto-Fill</CardTitle>
+                                <Badge variant="secondary" className="text-xs font-normal bg-muted text-muted-foreground data-[theme=royal]:bg-white/20 data-[theme=royal]:text-white">Coming Soon</Badge>
+                            </div>
                             <CardDescription className="data-[theme=royal]:text-white/60">Upload district documents and let AI extract your profile data</CardDescription>
                         </div>
                     </div>
