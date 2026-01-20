@@ -69,7 +69,7 @@ export function GrantCard({ grant, applicationId, onViewDetails }: GrantCardProp
 
             {/* Description */}
             {grant.description && (
-                <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
+                <p className="text-sm text-muted-foreground mb-4 line-clamp-4 whitespace-pre-line leading-relaxed">
                     {grant.description}
                 </p>
             )}
