@@ -8,6 +8,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ingestionOrchestrator } from "@/lib/ingestion";
 
+// Allow longer runtime for ingestion (Vercel Hobby: 60s, Pro: 300s)
+export const maxDuration = 60;
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
@@ -20,7 +24,8 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Start ingestion (async - will return immediately)
+        // Start ingestion
+        // Note: In serverless, we must await this or the process will be killed when response is sent.
         const result = await ingestionOrchestrator.runIngestion(source);
 
         return NextResponse.json({

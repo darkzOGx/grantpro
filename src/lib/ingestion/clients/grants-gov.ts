@@ -32,21 +32,14 @@ const CONFIG: ClientConfig = {
 const GRANTS_GOV_LEGACY_URL = "https://apply07.grants.gov/grantsws/rest";
 
 // Education-related keywords for school districts
+// Optimized list for faster ingestion within serverless timeouts
 const EDUCATION_KEYWORDS = [
-  "education",
-  "school",
+  "school district",
   "K-12",
-  "student",
-  "teacher",
-  "classroom",
   "STEM education",
   "arts education",
-  "nutrition",
-  "school lunch",
-  "early childhood",
-  "literacy",
-  "after school",
-  "youth development",
+  "school nutrition",
+  "mental health school",
 ];
 
 // ============================================
@@ -105,7 +98,7 @@ export class GrantsGovClient extends BaseClient {
 
     // Fetch details for each (in parallel batches)
     const detailedGrants: GrantsGovOpportunity[] = [];
-    const BATCH_SIZE = 5;
+    const BATCH_SIZE = 10; // Increased concurrency
 
     for (let i = 0; i < uniqueHits.length; i += BATCH_SIZE) {
       const batch = uniqueHits.slice(i, i + BATCH_SIZE);
