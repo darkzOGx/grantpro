@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { Upload, FileText, X, Sparkles, Building2, Users, DollarSign, Phone, FileCheck } from "lucide-react";
+import { Upload, FileText, X, Sparkles, Building2, Users, DollarSign, Phone, FileCheck, Database, RefreshCw, AlertCircle } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,8 @@ export default function SettingsPage() {
     const [isDragging, setIsDragging] = useState(false);
     const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
     const [isExtracting, setIsExtracting] = useState(false);
+    const [isSyncing, setIsSyncing] = useState<Record<string, boolean>>({});
+    const [syncStatus, setSyncStatus] = useState<Record<string, string>>({});
 
     const handleDragOver = useCallback((e: React.DragEvent) => {
         e.preventDefault();
@@ -51,16 +53,103 @@ export default function SettingsPage() {
         alert("AI extraction complete! Profile fields have been auto-populated.");
     };
 
+    const handleSync = async (source: string) => {
+        setIsSyncing(prev => ({ ...prev, [source]: true }));
+        setSyncStatus(prev => ({ ...prev, [source]: "Syncing..." }));
+        
+        try {
+            const response = await fetch("/api/ingestion", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ source }),
+            });
+            
+            if (!response.ok) throw new Error("Sync failed");
+            
+            const data = await response.json();
+            const newCount = data.result?.totalNew || 0;
+            const updatedCount = data.result?.totalUpdated || 0;
+            
+            setSyncStatus(prev => ({ 
+                ...prev, 
+                [source]: `Complete: ${newCount} new, ${updatedCount} updated` 
+            }));
+        } catch (error) {
+            console.error(error);
+            setSyncStatus(prev => ({ ...prev, [source]: "Failed to sync" }));
+        } finally {
+            setIsSyncing(prev => ({ ...prev, [source]: false }));
+        }
+    };
+
     return (
         <div className="space-y-8 max-w-5xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700">
             <div>
                 <h1 className="text-3xl font-bold tracking-tight text-foreground">Settings</h1>
                 <p className="text-muted-foreground mt-1">
-                    Manage your district profile for grant auto-fill
+                    Manage your district profile and data sources
                 </p>
             </div>
 
             <div className="grid gap-6">
+                {/* Data Management Section */}
+                <Card className="bg-card">
+                    <CardHeader>
+                        <div className="flex items-center gap-2">
+                            <Database className="w-5 h-5 text-muted-foreground" />
+                            <CardTitle className="text-lg">Data Management</CardTitle>
+                        </div>
+                        <CardDescription>
+                            Manually trigger data synchronization from external grant sources. 
+                            Use this if the grant catalog appears incomplete or outdated.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/30">
+                            <div>
+                                <div className="font-medium">Grants.gov (Federal)</div>
+                                <div className="text-xs text-muted-foreground mt-1">
+                                    {syncStatus["grants_gov"] || "Ready to sync"}
+                                </div>
+                            </div>
+                            <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => handleSync("grants_gov")}
+                                disabled={isSyncing["grants_gov"]}
+                            >
+                                {isSyncing["grants_gov"] ? (
+                                    <RefreshCw className="w-4 h-4 animate-spin mr-2" />
+                                ) : (
+                                    <RefreshCw className="w-4 h-4 mr-2" />
+                                )}
+                                Sync Now
+                            </Button>
+                        </div>
+                        <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/30">
+                            <div>
+                                <div className="font-medium">California Grants Portal</div>
+                                <div className="text-xs text-muted-foreground mt-1">
+                                    {syncStatus["ca_grants"] || "Ready to sync"}
+                                </div>
+                            </div>
+                            <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => handleSync("ca_grants")}
+                                disabled={isSyncing["ca_grants"]}
+                            >
+                                {isSyncing["ca_grants"] ? (
+                                    <RefreshCw className="w-4 h-4 animate-spin mr-2" />
+                                ) : (
+                                    <RefreshCw className="w-4 h-4 mr-2" />
+                                )}
+                                Sync Now
+                            </Button>
+                        </div>
+                    </CardContent>
+                </Card>
+
                 {/* Organization Details */}
                 <Card className="bg-card text-card-foreground">
                     <CardHeader>
