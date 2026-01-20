@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { Bell, Search, Menu } from "lucide-react";
+import { Search, Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -22,9 +22,7 @@ export function DashboardHeader() {
     return (
         <header className={cn(
             "sticky top-0 z-40 w-full border-b transition-all duration-300",
-            "bg-background/80 backdrop-blur-md border-border/40", // Glassmorphism
-            // Royal Mode overrides
-            "data-[theme=royal]:bg-white/5 data-[theme=royal]:backdrop-blur-xl data-[theme=royal]:border-white/10"
+            "bg-background/80 backdrop-blur-md border-border/40"
         )}>
             <div className="flex items-center justify-between h-16 px-6">
                 {/* Left: Breadcrumbs / Title */}
@@ -53,13 +51,6 @@ export function DashboardHeader() {
                         <kbd className="pointer-events-none absolute right-2.5 top-2.5 hidden h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100 sm:flex">
                             <span className="text-xs">⌘</span>K
                         </kbd>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="icon" className="relative group">
-                            <Bell className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
-                            <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-destructive rounded-full border-2 border-background animate-pulse" />
-                        </Button>
                     </div>
                 </div>
             </div>

@@ -86,30 +86,30 @@ export function GrantsFilters() {
     const hasActiveFilters = currentSearch !== "" || currentCategories.length > 0;
 
     return (
-        <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-4">
+        <div className="bg-card rounded-xl border border-border p-4 space-y-4">
             <div className="flex items-center gap-4">
                 {/* Search Input */}
                 <div className="flex-1 relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                     <input
                         type="text"
                         placeholder="Search grants by title or keywords..."
                         defaultValue={currentSearch}
                         onChange={(e) => handleSearch(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 outline-none transition-all"
+                        className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-input bg-background text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
                     />
                 </div>
 
                 {/* Sort Dropdown */}
                 <div className="flex items-center gap-2">
-                    <ArrowUpDown className="w-4 h-4 text-gray-400" />
+                    <ArrowUpDown className="w-4 h-4 text-muted-foreground" />
                     <select
                         value={currentSort}
                         onChange={(e) => handleSort(e.target.value)}
-                        className="px-3 py-2.5 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 outline-none cursor-pointer"
+                        className="px-3 py-2.5 rounded-lg border border-input bg-background text-sm font-medium text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none cursor-pointer"
                     >
                         {SORT_OPTIONS.map((option) => (
-                            <option key={option.value} value={option.value}>
+                            <option key={option.value} value={option.value} className="bg-background text-foreground">
                                 {option.label}
                             </option>
                         ))}
@@ -120,7 +120,7 @@ export function GrantsFilters() {
                 {hasActiveFilters && (
                     <button
                         onClick={clearFilters}
-                        className="flex items-center gap-1.5 px-3 py-2.5 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+                        className="flex items-center gap-1.5 px-3 py-2.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
                     >
                         <X className="w-4 h-4" />
                         Clear
@@ -130,7 +130,7 @@ export function GrantsFilters() {
 
             {/* Category Filters - Always Visible */}
             <div className="flex flex-wrap items-center gap-2">
-                <span className="text-sm font-medium text-gray-500 mr-2">
+                <span className="text-sm font-medium text-muted-foreground mr-2">
                     Filter by Category:
                 </span>
                 {CATEGORIES.map((category) => (
@@ -140,8 +140,8 @@ export function GrantsFilters() {
                         className={cn(
                             "px-3 py-1.5 rounded-full text-sm font-medium transition-colors",
                             currentCategories.includes(category)
-                                ? "bg-primary-600 text-white"
-                                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                                ? "bg-primary text-primary-foreground"
+                                : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
                         )}
                     >
                         {CATEGORY_LABELS[category]}

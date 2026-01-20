@@ -57,6 +57,8 @@ export function Sidebar({ district }: SidebarProps) {
                 "bg-background border-border",
                 // Royal Mode overrides
                 "data-[theme=royal]:bg-gradient-to-b data-[theme=royal]:from-[hsl(315,41%,25%)] data-[theme=royal]:to-[hsl(315,41%,15%)] data-[theme=royal]:border-[hsl(315,41%,35%)]",
+                // Blue Mode overrides (Sidebar stays dark)
+                "data-[theme=blue]:bg-slate-950 data-[theme=blue]:border-slate-800",
                 collapsed ? "w-[70px]" : "w-64"
             )}
             data-theme-target="sidebar" // Helper for theme targeting if needed
@@ -64,12 +66,14 @@ export function Sidebar({ district }: SidebarProps) {
             {/* Logo Section */}
             <div className={cn(
                 "flex items-center gap-3 px-4 py-5 border-b border-border/40",
-                "data-[theme=royal]:border-[hsl(315,41%,35%)]"
+                "data-[theme=royal]:border-[hsl(315,41%,35%)]",
+                "data-[theme=blue]:border-slate-800"
             )}>
                 <div className={cn(
                     "w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-all",
                     "bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-lg shadow-primary/20",
-                    "data-[theme=royal]:from-royal-gold data-[theme=royal]:to-[hsl(40,80%,40%)] data-[theme=royal]:text-white data-[theme=royal]:shadow-[hsl(45,68%,47%,0.3)]"
+                    "data-[theme=royal]:from-royal-gold data-[theme=royal]:to-[hsl(40,80%,40%)] data-[theme=royal]:text-white data-[theme=royal]:shadow-[hsl(45,68%,47%,0.3)]",
+                    "data-[theme=blue]:from-blue-600 data-[theme=blue]:to-blue-800 data-[theme=blue]:text-white data-[theme=blue]:shadow-blue-900/20"
                 )}>
                     <GraduationCap className="w-6 h-6" />
                 </div>
@@ -78,10 +82,10 @@ export function Sidebar({ district }: SidebarProps) {
                     "transition-all duration-300 overflow-hidden whitespace-nowrap",
                     collapsed ? "w-0 opacity-0" : "w-auto opacity-100"
                 )}>
-                    <h1 className="text-xl font-bold text-foreground data-[theme=royal]:text-white tracking-tight">
+                    <h1 className="text-xl font-bold text-foreground data-[theme=royal]:text-white data-[theme=blue]:text-white tracking-tight">
                         GrantPro
                     </h1>
-                    <p className="text-xs text-muted-foreground data-[theme=royal]:text-white/60">
+                    <p className="text-xs text-muted-foreground data-[theme=royal]:text-white/60 data-[theme=blue]:text-slate-400">
                         School Portal
                     </p>
                 </div>
@@ -94,9 +98,10 @@ export function Sidebar({ district }: SidebarProps) {
                         "flex items-center gap-3 p-2 rounded-lg transition-colors overflow-hidden",
                         "bg-muted/50 border border-transparent hover:bg-muted",
                         "data-[theme=royal]:bg-white/5 data-[theme=royal]:hover:bg-white/10 data-[theme=royal]:text-white",
+                        "data-[theme=blue]:bg-white/5 data-[theme=blue]:hover:bg-white/10 data-[theme=blue]:text-white",
                         collapsed && "justify-center p-2"
                     )}>
-                        <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 text-primary font-bold data-[theme=royal]:bg-white/10 data-[theme=royal]:text-royal-gold">
+                        <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 text-primary font-bold data-[theme=royal]:bg-white/10 data-[theme=royal]:text-royal-gold data-[theme=blue]:bg-white/10 data-[theme=blue]:text-blue-400">
                             {district.name.charAt(0)}
                         </div>
                         {!collapsed && (
@@ -135,22 +140,22 @@ export function Sidebar({ district }: SidebarProps) {
                             className={cn(
                                 "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group relative",
                                 isActive
-                                    ? "bg-primary/10 text-primary data-[theme=royal]:bg-white/10 data-[theme=royal]:text-royal-gold"
-                                    : "text-muted-foreground hover:bg-muted/60 hover:text-foreground data-[theme=royal]:text-white/70 data-[theme=royal]:hover:bg-white/5 data-[theme=royal]:hover:text-white",
+                                    ? "bg-primary/10 text-primary data-[theme=royal]:bg-white/10 data-[theme=royal]:text-royal-gold data-[theme=blue]:bg-white/10 data-[theme=blue]:text-white"
+                                    : "text-muted-foreground hover:bg-muted/60 hover:text-foreground data-[theme=royal]:text-white/70 data-[theme=royal]:hover:bg-white/5 data-[theme=royal]:hover:text-white data-[theme=blue]:text-slate-400 data-[theme=blue]:hover:bg-white/5 data-[theme=blue]:hover:text-white",
                                 collapsed && "justify-center px-2"
                             )}
                         >
                             <item.icon
                                 className={cn(
                                     "w-5 h-5 transition-transform group-hover:scale-110",
-                                    isActive ? "text-primary data-[theme=royal]:text-royal-gold" : "text-muted-foreground/70 data-[theme=royal]:text-white/50 group-hover:text-foreground data-[theme=royal]:group-hover:text-white"
+                                    isActive ? "text-primary data-[theme=royal]:text-royal-gold data-[theme=blue]:text-white" : "text-muted-foreground/70 data-[theme=royal]:text-white/50 group-hover:text-foreground data-[theme=royal]:group-hover:text-white data-[theme=blue]:text-slate-500 data-[theme=blue]:group-hover:text-white"
                                 )}
                             />
                             {!collapsed && (
                                 <span>{item.name}</span>
                             )}
                             {isActive && !collapsed && (
-                                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-primary rounded-r-full data-[theme=royal]:bg-royal-gold" />
+                                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-primary rounded-r-full data-[theme=royal]:bg-royal-gold data-[theme=blue]:bg-blue-500" />
                             )}
                         </Link>
                     );
@@ -160,14 +165,15 @@ export function Sidebar({ district }: SidebarProps) {
             {/* Footer / Utilities */}
             <div className={cn(
                 "p-3 border-t border-border/40 space-y-2",
-                "data-[theme=royal]:border-[hsl(315,41%,35%)]"
+                "data-[theme=royal]:border-[hsl(315,41%,35%)]",
+                "data-[theme=blue]:border-slate-800"
             )}>
                 {/* Collapse Toggle */}
                 <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => setCollapsed(!collapsed)}
-                    className="w-full justify-between items-center text-muted-foreground hover:text-foreground data-[theme=royal]:text-white/60 data-[theme=royal]:hover:text-white data-[theme=royal]:hover:bg-white/10"
+                    className="w-full justify-between items-center text-muted-foreground hover:text-foreground data-[theme=royal]:text-white/60 data-[theme=royal]:hover:text-white data-[theme=royal]:hover:bg-white/10 data-[theme=blue]:text-slate-400 data-[theme=blue]:hover:text-white data-[theme=blue]:hover:bg-white/10"
                 >
                     {!collapsed && <span>Collapse</span>}
                     {collapsed ? <ChevronRight className="w-4 h-4 ml-auto" /> : <ChevronLeft className="w-4 h-4" />}
@@ -177,17 +183,17 @@ export function Sidebar({ district }: SidebarProps) {
                     {/* User Profile */}
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="rounded-full overflow-hidden shrink-0 data-[theme=royal]:hover:bg-white/10">
+                            <Button variant="ghost" size="icon" className="rounded-full overflow-hidden shrink-0 data-[theme=royal]:hover:bg-white/10 data-[theme=blue]:hover:bg-white/10">
                                 <div className="w-8 h-8 bg-gradient-to-tr from-blue-500 to-purple-500 flex items-center justify-center text-white text-xs font-bold">
-                                    JD
+                                    HB
                                 </div>
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="start" className="w-56 mb-2">
                             <div className="flex items-center gap-2 p-2 mb-2 bg-muted/50 rounded-lg">
-                                <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xs">JD</div>
+                                <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xs">HB</div>
                                 <div className="text-xs">
-                                    <div className="font-semibold">Jane Doe</div>
+                                    <div className="font-semibold">Haifa Buzreba</div>
                                     <div className="text-muted-foreground">admin@district.edu</div>
                                 </div>
                             </div>

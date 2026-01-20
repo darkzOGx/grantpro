@@ -1,317 +1,435 @@
 /**
  * Grants.gov API Client
- * 
+ *
  * RESTful API for searching and retrieving federal grant opportunities.
- * Trying modern API format: https://api.grants.gov/v1/opportunities
+ * Supports both Simpler.Grants.gov (modern) and legacy Grants.gov APIs.
  */
 
+import { GrantCategory, GrantSourceType } from "@prisma/client";
+import { BaseClient, ClientConfig, FetchResult } from "./BaseClient";
+import { registerClient } from "../registry";
 import {
-    GrantsGovSearchParams,
-    GrantsGovSearchResponse,
-    GrantsGovOpportunity,
+  GrantsGovSearchParams,
+  GrantsGovSearchHit,
+  GrantsGovOpportunity,
+  NormalizedGrant,
+  inferCategoryFromCFDA,
+  inferCategoryFromKeywords,
 } from "../types";
 
-// Try both legacy and modern endpoints
+// ============================================
+// Configuration
+// ============================================
+
+const CONFIG: ClientConfig = {
+  name: "grants_gov",
+  displayName: "Grants.gov",
+  sourceType: "FEDERAL_API",
+  baseUrl: "https://api.simpler.grants.gov/v1",
+  rateLimit: { requestsPerSecond: 5, burstLimit: 10 },
+};
+
 const GRANTS_GOV_LEGACY_URL = "https://apply07.grants.gov/grantsws/rest";
-const GRANTS_GOV_MODERN_URL = "https://api.grants.gov/v1";
 
-export class GrantsGovClient {
-    private apiKey?: string;
+// Education-related keywords for school districts
+const EDUCATION_KEYWORDS = [
+  "education",
+  "school",
+  "K-12",
+  "student",
+  "teacher",
+  "classroom",
+  "STEM education",
+  "arts education",
+  "nutrition",
+  "school lunch",
+  "early childhood",
+  "literacy",
+  "after school",
+  "youth development",
+];
 
-    constructor(apiKey?: string) {
-        this.apiKey = apiKey || process.env.GRANTS_GOV_API_KEY;
-    }
+// ============================================
+// Client Implementation
+// ============================================
 
-    /**
-     * Search for grant opportunities using filters
-     */
-    async searchOpportunities(
-        params: GrantsGovSearchParams
-    ): Promise<{ totalCount: number, hits: import("../types").GrantsGovSearchHit[] }> {
-        // If we have an API key, try Simpler.Grants.gov first
-        if (this.apiKey) {
-            try {
-                return await this.searchSimpler(params);
-            } catch (e) {
-                console.log("Simpler API failed, falling back to legacy:", (e as Error).message);
-            }
-        }
-        // Fallback to legacy API
-        return await this.searchLegacy(params);
-    }
+export class GrantsGovClient extends BaseClient {
+  private apiKey?: string;
 
-    private async searchSimpler(
-        params: GrantsGovSearchParams
-    ): Promise<{ totalCount: number, hits: import("../types").GrantsGovSearchHit[] }> {
-        // Use Simpler.Grants.gov API (requires API key from simpler.grants.gov/developer)
-        const url = "https://api.simpler.grants.gov/v1/opportunities/search";
+  constructor() {
+    super(CONFIG);
+    this.apiKey = process.env.GRANTS_GOV_API_KEY;
+  }
 
-        // Build request body matching Simpler API format
-        const requestBody: Record<string, unknown> = {
-            pagination: {
-                page_size: params.rows || 100,
-                page_offset: Math.floor((params.startRecordNum || 0) / (params.rows || 100)) + 1, // 1-based
-                order_by: "post_date",
-                sort_direction: "descending",
-            },
-            filters: {
-                // Only fetch posted opportunities
-                opportunity_status: { one_of: ["posted"] },
-            },
-        };
+  // ============================================
+  // BaseClient Abstract Method Implementations
+  // ============================================
 
-        // Add keyword if provided
-        if (params.keyword) {
-            requestBody.query = params.keyword;
-        }
+  /**
+   * Fetch education-related grant opportunities
+   */
+  async fetchGrants(): Promise<FetchResult<GrantsGovOpportunity>> {
+    this.log("Fetching school district relevant grants...");
 
-        // Add agency filter if provided
-        if (params.agency) {
-            (requestBody.filters as Record<string, unknown>).agency = { one_of: [params.agency] };
-        }
+    const allHits: GrantsGovSearchHit[] = [];
+    const batchSize = 100;
 
-        console.log(`Calling Simpler.Grants.gov API...`);
+    // Search with multiple keywords to get diverse results
+    for (const keyword of EDUCATION_KEYWORDS) {
+      this.log(`  Searching: "${keyword}"...`);
 
-        const response = await fetch(url, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "X-API-Key": this.apiKey || "",
-            },
-            body: JSON.stringify(requestBody),
+      try {
+        const result = await this.searchOpportunities({
+          keyword,
+          oppStatus: "posted",
+          rows: batchSize,
+          startRecordNum: 0,
         });
 
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.log(`Simpler API response: ${response.status} - ${errorText}`);
-            throw new Error(`Simpler API error: ${response.status} ${response.statusText}`);
-        }
+        this.log(`    Found ${result.hits.length} grants for "${keyword}"`);
+        allHits.push(...result.hits);
+      } catch (error) {
+        this.warn(`    Error searching "${keyword}": ${(error as Error).message}`);
+      }
 
-        const data = await response.json();
-        console.log(`Simpler API returned ${data.data?.length || 0} opportunities`);
-
-        // Map the response to our hit format
-        const hits = (data.data || []).map((opp: any) => ({
-            id: String(opp.opportunity_id || opp.id),
-            number: opp.opportunity_number || "",
-            title: opp.opportunity_title || opp.title || "",
-            agency: opp.agency_code || opp.agency || "",
-            openDate: opp.post_date || "",
-            closeDate: opp.close_date || "",
-            cfdaList: opp.assistance_listing_number ? [opp.assistance_listing_number] : [],
-        }));
-
-        return {
-            totalCount: data.pagination?.total_records || hits.length,
-            hits,
-        };
+      // Use inherited rate limiting
+      await this.delay(200);
     }
 
-    private async searchLegacy(
-        params: GrantsGovSearchParams
-    ): Promise<{ totalCount: number, hits: import("../types").GrantsGovSearchHit[] }> {
-        const url = `${GRANTS_GOV_LEGACY_URL}/opportunities/search`;
+    // Deduplicate by ID
+    const uniqueHits = Array.from(
+      new Map(allHits.map((hit) => [hit.id, hit])).values()
+    );
 
-        // Build search criteria
-        const searchCriteria: Record<string, unknown> = {};
+    this.log(`Found ${uniqueHits.length} unique education-related grants. Processing...`);
 
-        if (params.keyword) searchCriteria.keyword = params.keyword;
-        if (params.opportunityId) searchCriteria.opportunityId = params.opportunityId;
-        if (params.fundingInstrumentType) searchCriteria.fundingInstrumentType = params.fundingInstrumentType;
-        if (params.agency) searchCriteria.agency = params.agency;
-        if (params.oppStatus) searchCriteria.oppStatus = params.oppStatus;
-        if (params.postedDateRange) searchCriteria.postedDateRange = params.postedDateRange;
-        if (params.eligibility) searchCriteria.eligibility = params.eligibility;
+    // Fetch details for each (in parallel batches)
+    const detailedGrants: GrantsGovOpportunity[] = [];
+    const BATCH_SIZE = 5;
 
-        const requestBody = {
-            searchCriteria,
-            pagination: {
-                rows: params.rows || 100,
-                startRecordNum: params.startRecordNum || 0,
-                sortBy: params.sortBy || "openDate",
-                sortOrder: "desc",
-            },
-        };
+    for (let i = 0; i < uniqueHits.length; i += BATCH_SIZE) {
+      const batch = uniqueHits.slice(i, i + BATCH_SIZE);
+      const promises = batch.map(async (hit) => {
+        const details = await this.getOpportunityDetails(hit.id);
 
-        const response = await fetch(url, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                // Try Authorization header format per Grants.gov docs
-                ...(this.apiKey && { "Authorization": `APIKEY=${this.apiKey}` }),
-            },
-            body: JSON.stringify(requestBody),
+        if (details) {
+          return {
+            ...details,
+            opportunityId: details.opportunityId || hit.id,
+            opportunityTitle: details.opportunityTitle || hit.title,
+          };
+        } else {
+          // Fallback to basic info from search hit
+          return this.createFallbackOpportunity(hit);
+        }
+      });
+
+      const results = await Promise.all(promises);
+      detailedGrants.push(...(results.filter(Boolean) as GrantsGovOpportunity[]));
+
+      await this.delay(100);
+    }
+
+    return {
+      data: detailedGrants,
+      totalCount: detailedGrants.length,
+      hasMore: false,
+    };
+  }
+
+  /**
+   * Normalize a Grants.gov opportunity to internal schema
+   */
+  normalizeGrant(opp: GrantsGovOpportunity): NormalizedGrant {
+    // Extract CFDA number if available
+    const cfda = opp.cfdaList?.[0]?.cfdaNumber;
+
+    // Determine category from CFDA or keywords
+    let category: GrantCategory = "FEDERAL";
+    if (cfda) {
+      category = inferCategoryFromCFDA(cfda);
+    } else {
+      const text = `${opp.opportunityTitle} ${opp.synopsis?.synopsisDesc || ""} ${opp.categoryOfFunding || ""}`;
+      category = inferCategoryFromKeywords(text);
+    }
+
+    // Parse funding amounts
+    const fundingAmountMin = opp.awardFloor || 0;
+    const fundingAmountMax =
+      opp.awardCeiling || opp.estimatedTotalProgramFunding || fundingAmountMin;
+
+    // Parse deadline
+    let deadline: Date;
+    try {
+      deadline = opp.closeDate
+        ? new Date(opp.closeDate)
+        : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+    } catch {
+      deadline = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+    }
+
+    // Generate appropriate URL based on ID format
+    // UUIDs (from Simpler API) use simpler.grants.gov
+    // Numeric IDs (from legacy API) use grants.gov
+    const isUUID =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        opp.opportunityId
+      );
+    const grantUrl = isUUID
+      ? `https://simpler.grants.gov/opportunity/${opp.opportunityId}`
+      : `https://www.grants.gov/search-results-detail/${opp.opportunityId}`;
+
+    return {
+      title: opp.opportunityTitle,
+      category,
+      sourceType: "FEDERAL" as GrantSourceType,
+      fundingAmountMin,
+      fundingAmountMax,
+      deadline,
+      externalId: opp.opportunityId,
+      sourceUrl: grantUrl,
+      cfda,
+      agencyCode: opp.agencyCode || opp.owningAgencyCode,
+      description: opp.synopsis?.synopsisDesc,
+      eligibilityCriteria: [
+        ...(opp.eligibleApplicants || []),
+        opp.additionalEligibilityInfo,
+      ]
+        .filter(Boolean)
+        .join("\n"),
+      applicationUrl: grantUrl,
+      requirements: {
+        eligibleApplicants: opp.eligibleApplicants,
+        fundingInstrumentType: opp.fundingInstrumentType,
+        categoryOfFunding: opp.categoryOfFunding,
+        costSharing: opp.costSharing,
+        expectedNumberOfAwards: opp.expectedNumberOfAwards,
+        cfdaList: opp.cfdaList,
+      },
+      isActive: opp.oppStatus === "posted",
+    };
+  }
+
+  /**
+   * Get external ID from raw opportunity data
+   */
+  getExternalId(opp: GrantsGovOpportunity): string {
+    return opp.opportunityId;
+  }
+
+  // ============================================
+  // Public API Methods
+  // ============================================
+
+  /**
+   * Search for grant opportunities using filters
+   */
+  async searchOpportunities(
+    params: GrantsGovSearchParams
+  ): Promise<{ totalCount: number; hits: GrantsGovSearchHit[] }> {
+    // If we have an API key, try Simpler.Grants.gov first
+    if (this.apiKey) {
+      try {
+        return await this.searchSimpler(params);
+      } catch (e) {
+        this.log(
+          "Simpler API failed, falling back to legacy:",
+          (e as Error).message
+        );
+      }
+    }
+    // Fallback to legacy API
+    return await this.searchLegacy(params);
+  }
+
+  /**
+   * Fetch detailed information for a specific opportunity ID
+   */
+  async getOpportunityDetails(
+    opportunityId: string
+  ): Promise<GrantsGovOpportunity | null> {
+    const url = `${GRANTS_GOV_LEGACY_URL}/opportunities/${opportunityId}`;
+
+    try {
+      // Try POST first (Grants.gov often uses POST even for retrieval)
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(this.apiKey && { "X-Api-Key": this.apiKey }),
+        },
+        body: JSON.stringify({}),
+      });
+
+      // If POST fails, try GET
+      if (response.status === 404 || response.status === 405) {
+        const getResponse = await fetch(url, {
+          method: "GET",
+          headers: {
+            ...(this.apiKey && { "X-Api-Key": this.apiKey }),
+          },
         });
 
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Legacy API error: ${response.status} ${response.statusText} - ${errorText}`);
+        if (!getResponse.ok) {
+          return null;
         }
+        return getResponse.json();
+      }
 
-        const data = await response.json();
+      if (!response.ok) {
+        return null;
+      }
+      return response.json();
+    } catch (e) {
+      this.error(`Failed to fetch details for ${opportunityId}`, e);
+      return null;
+    }
+  }
 
-        return {
-            totalCount: data.rowCount || 0,
-            hits: (data.oppHits || []) as import("../types").GrantsGovSearchHit[],
-        };
+  // ============================================
+  // Private Helper Methods
+  // ============================================
+
+  private async searchSimpler(
+    params: GrantsGovSearchParams
+  ): Promise<{ totalCount: number; hits: GrantsGovSearchHit[] }> {
+    const url = "https://api.simpler.grants.gov/v1/opportunities/search";
+
+    const requestBody: Record<string, unknown> = {
+      pagination: {
+        page_size: params.rows || 100,
+        page_offset:
+          Math.floor((params.startRecordNum || 0) / (params.rows || 100)) + 1,
+        order_by: "post_date",
+        sort_direction: "descending",
+      },
+      filters: {
+        opportunity_status: { one_of: ["posted"] },
+      },
+    };
+
+    if (params.keyword) {
+      requestBody.query = params.keyword;
     }
 
-
-    /**
-     * Fetch detailed information for a specific opportunity ID
-     */
-    async getOpportunityDetails(opportunityId: string): Promise<GrantsGovOpportunity | null> {
-        // Try synopsis endpoint first as it usually has the most relevant details
-        // Note: The structure of this response also needs verification, but assuming standard format for now
-        const url = `${GRANTS_GOV_LEGACY_URL}/opportunities/${opportunityId}`;
-
-        try {
-            const response = await fetch(url, {
-                method: "POST", // Grants.gov often uses POST even for retrieval
-                headers: {
-                    "Content-Type": "application/json",
-                    ...(this.apiKey && { "X-Api-Key": this.apiKey }),
-                },
-                body: JSON.stringify({}) // Empty body sometimes needed
-            });
-
-            // If POST fails, try GET
-            if (response.status === 404 || response.status === 405) {
-                console.log(`Debug: ${url} returned ${response.status}, trying GET...`);
-                const getResponse = await fetch(url, {
-                    method: "GET",
-                    headers: {
-                        ...(this.apiKey && { "X-Api-Key": this.apiKey }),
-                    },
-                });
-
-                if (!getResponse.ok) {
-                    console.error(`Debug: GET ${url} failed: ${getResponse.status} ${getResponse.statusText}`);
-                    return null;
-                }
-                const data = await getResponse.json();
-                console.log(`Debug: Successfully fetched details for ${opportunityId}`);
-                return data;
-            }
-
-            if (!response.ok) {
-                console.error(`Debug: POST ${url} failed: ${response.status} ${response.statusText}`);
-                const text = await response.text();
-                console.error("Debug: Error Body:", text);
-                return null;
-            }
-            const data = await response.json();
-            return data;
-
-        } catch (e) {
-            console.error(`Failed to fetch details for ${opportunityId}`, e);
-            return null;
-        }
+    if (params.agency) {
+      (requestBody.filters as Record<string, unknown>).agency = {
+        one_of: [params.agency],
+      };
     }
 
-    /**
-     * Fetch education-related grant opportunities (K-12 focus)
-     * Searches for grants relevant to school districts across multiple categories:
-     * Federal, State, Nutrition, Arts, STEM, Infrastructure
-     */
-    async fetchEducationGrants(): Promise<GrantsGovOpportunity[]> {
-        console.log("Fetching school district relevant grants from Grants.gov...");
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-API-Key": this.apiKey || "",
+      },
+      body: JSON.stringify(requestBody),
+    });
 
-        // Education-related keywords for school districts
-        const educationKeywords = [
-            "education",
-            "school",
-            "K-12",
-            "student",
-            "teacher",
-            "classroom",
-            "STEM education",
-            "arts education",
-            "nutrition",
-            "school lunch",
-            "early childhood",
-            "literacy",
-            "after school",
-            "youth development",
-        ];
-
-        const allHits: import("../types").GrantsGovSearchHit[] = [];
-        const batchSize = 100;
-
-        // Search with multiple keywords to get diverse results
-        for (const keyword of educationKeywords) {
-            console.log(`  Searching: "${keyword}"...`);
-
-            const result = await this.searchOpportunities({
-                keyword,
-                oppStatus: "posted",
-                rows: batchSize,
-                startRecordNum: 0
-            });
-
-            console.log(`    Found ${result.hits.length} grants for "${keyword}"`);
-            allHits.push(...result.hits);
-
-            // Rate limit between searches
-            await this.delay(200);
-        }
-
-        // Deduplicate by ID
-        const uniqueHits = Array.from(new Map(allHits.map(hit => [hit.id, hit])).values());
-
-        console.log(`Found ${uniqueHits.length} unique education-related grants. Processing...`);
-
-        // 2. Fetch details for each (in parallel batches to be nice)
-        const detailedGrants: GrantsGovOpportunity[] = [];
-        const BATCH_SIZE = 5;
-
-        for (let i = 0; i < uniqueHits.length; i += BATCH_SIZE) {
-            const batch = uniqueHits.slice(i, i + BATCH_SIZE);
-            const promises = batch.map(async (hit) => {
-                let details = await this.getOpportunityDetails(hit.id);
-
-                if (details) {
-                    return {
-                        ...details,
-                        opportunityId: details.opportunityId || hit.id,
-                        opportunityTitle: details.opportunityTitle || hit.title,
-                    };
-                } else {
-                    console.warn(`Warning: Could not fetch details for ${hit.id}, using basic info.`);
-                    // Fallback to basic info from search hit
-                    return {
-                        opportunityId: hit.id,
-                        opportunityTitle: hit.title,
-                        opportunityNumber: hit.number,
-                        owningAgencyCode: hit.agency,
-                        openDate: hit.openDate,
-                        closeDate: hit.closeDate,
-                        oppStatus: "posted",
-                        cfdaList: hit.cfdaList?.map(c => ({ cfdaNumber: c, programTitle: "" })) || [],
-                        // Missing details
-                        synopsis: { synopsisDesc: "" },
-                        eligibleApplicants: [],
-                        fundingInstrumentType: "GRANT", // Assumption
-                        categoryOfFunding: "O", // Other
-                        eligibilityCriteria: "",
-                        description: "",
-                    } as GrantsGovOpportunity;
-                }
-            });
-
-            const results = await Promise.all(promises);
-            detailedGrants.push(...(results.filter(Boolean) as GrantsGovOpportunity[]));
-
-            // Tiny delay
-            await this.delay(100);
-        }
-
-        return detailedGrants;
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(
+        `Simpler API error: ${response.status} ${response.statusText} - ${errorText}`
+      );
     }
 
-    private delay(ms: number): Promise<void> {
-        return new Promise((resolve) => setTimeout(resolve, ms));
+    const data = await response.json();
+
+    // Map the response to our hit format
+    const hits = (data.data || []).map((opp: Record<string, unknown>) => ({
+      id: String(opp.opportunity_id || opp.id),
+      number: (opp.opportunity_number as string) || "",
+      title: (opp.opportunity_title as string) || (opp.title as string) || "",
+      agency: (opp.agency_code as string) || (opp.agency as string) || "",
+      openDate: (opp.post_date as string) || "",
+      closeDate: (opp.close_date as string) || "",
+      cfdaList: opp.assistance_listing_number
+        ? [opp.assistance_listing_number as string]
+        : [],
+    }));
+
+    return {
+      totalCount: data.pagination?.total_records || hits.length,
+      hits,
+    };
+  }
+
+  private async searchLegacy(
+    params: GrantsGovSearchParams
+  ): Promise<{ totalCount: number; hits: GrantsGovSearchHit[] }> {
+    const url = `${GRANTS_GOV_LEGACY_URL}/opportunities/search`;
+
+    const searchCriteria: Record<string, unknown> = {};
+
+    if (params.keyword) searchCriteria.keyword = params.keyword;
+    if (params.opportunityId) searchCriteria.opportunityId = params.opportunityId;
+    if (params.fundingInstrumentType)
+      searchCriteria.fundingInstrumentType = params.fundingInstrumentType;
+    if (params.agency) searchCriteria.agency = params.agency;
+    if (params.oppStatus) searchCriteria.oppStatus = params.oppStatus;
+    if (params.postedDateRange)
+      searchCriteria.postedDateRange = params.postedDateRange;
+    if (params.eligibility) searchCriteria.eligibility = params.eligibility;
+
+    const requestBody = {
+      searchCriteria,
+      pagination: {
+        rows: params.rows || 100,
+        startRecordNum: params.startRecordNum || 0,
+        sortBy: params.sortBy || "openDate",
+        sortOrder: "desc",
+      },
+    };
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(this.apiKey && { Authorization: `APIKEY=${this.apiKey}` }),
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(
+        `Legacy API error: ${response.status} ${response.statusText} - ${errorText}`
+      );
     }
+
+    const data = await response.json();
+
+    return {
+      totalCount: data.rowCount || 0,
+      hits: (data.oppHits || []) as GrantsGovSearchHit[],
+    };
+  }
+
+  private createFallbackOpportunity(hit: GrantsGovSearchHit): GrantsGovOpportunity {
+    return {
+      opportunityId: hit.id,
+      opportunityTitle: hit.title,
+      opportunityNumber: hit.number,
+      owningAgencyCode: hit.agency,
+      openDate: hit.openDate,
+      closeDate: hit.closeDate,
+      oppStatus: "posted",
+      cfdaList:
+        hit.cfdaList?.map((c) => ({ cfdaNumber: c, programTitle: "" })) || [],
+      synopsis: { synopsisDesc: "" },
+      eligibleApplicants: [],
+      fundingInstrumentType: "GRANT",
+      categoryOfFunding: "O",
+    };
+  }
 }
 
+// ============================================
+// Self-Registration
+// ============================================
+
+registerClient(new GrantsGovClient());
+
+// Export for direct access if needed
 export const grantsGovClient = new GrantsGovClient();

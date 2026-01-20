@@ -37,7 +37,8 @@ export async function ingestGrantsGov() {
         // 3. Fetch Opportunities
         console.log("📡 Fetching grants from Grants.gov...");
         // Fetch Education, USDA Nutrition, and NEA Arts grants
-        const opportunities = await grantsGovClient.fetchEducationGrants();
+        const result = await grantsGovClient.fetchGrants();
+        const opportunities = result.data;
         console.log(`✅ Fetched ${opportunities.length} opportunities.`);
 
         await prisma.ingestionRun.update({

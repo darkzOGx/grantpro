@@ -103,19 +103,32 @@ export interface SamAssistanceListing {
 // ============================================
 
 export interface CaliforniaGrantCSV {
+    PortalID?: string;
     GrantID: string;
-    GrantTitle: string;
+    Status?: string;
+    LastUpdated?: string;
     AgencyDept: string;
-    AgencyEmail?: string;
+    Title: string;
+    Type?: string;
+    Categories?: string;
+    Purpose?: string;
+    Description?: string;
+    ApplicantType?: string;
+    ApplicantTypeNotes?: string;
+    Geography?: string;
+    FundingSource?: string;
+    MatchingFunds?: string;
+    MatchingFundsNotes?: string;
+    EstAvailFunds?: string;
+    EstAwards?: string;
+    EstAmounts?: string;
     OpenDate: string;
     ApplicationDeadline: string;
-    EstAvailFunds?: string;
+    AwardPeriod?: string;
+    ExpAwardDate?: string;
     GrantURL: string;
-    Description?: string;
-    EligibleApplicants?: string;
-    Categories?: string;
-    GeographicEligibility?: string;
-    MatchingFundsRequired?: string;
+    AgencyURL?: string;
+    ContactInfo?: string;
 }
 
 // ============================================
@@ -303,4 +316,110 @@ export function inferCategoryFromKeywords(text: string): GrantCategory {
     }
 
     return "FEDERAL";
+}
+
+// ============================================
+// Candid Grants API Types
+// ============================================
+
+export interface CandidSearchParams {
+    query?: string;
+    /** PCS subject codes for filtering (e.g., "ED" for education) */
+    subject?: string[];
+    /** Population codes for filtering */
+    population?: string[];
+    /** Years in YYYY format */
+    year?: string[];
+    /** Minimum grant amount */
+    min_amt?: number;
+    /** Maximum grant amount */
+    max_amt?: number;
+    /** Funder IDs to filter by */
+    funder_id?: string[];
+    /** Recipient IDs to filter by */
+    recip_id?: string[];
+    /** Page number for pagination */
+    page?: number;
+    /** Sort field */
+    sort_by?: "funder_name" | "amount" | "count";
+    /** Sort direction */
+    sort_order?: "asc" | "desc";
+}
+
+export interface CandidFunder {
+    /** Unique funder identifier */
+    funder_key: string;
+    /** Funder organization name */
+    funder_name: string;
+    /** City location */
+    funder_city?: string;
+    /** State code */
+    funder_state?: string;
+    /** Employer Identification Number */
+    ein?: string;
+    /** Total grant amount awarded */
+    amount: number;
+    /** Number of grants awarded */
+    count: number;
+    /** URL to Candid profile */
+    profile_url?: string;
+    /** GuideStar seal level (Bronze, Silver, Gold, Platinum) */
+    seal_level?: string;
+    /** Last data update date */
+    last_updated?: string;
+}
+
+export interface CandidRecipient {
+    /** Unique recipient identifier */
+    recip_key: string;
+    /** Recipient organization name */
+    recip_name: string;
+    /** City location */
+    recip_city?: string;
+    /** State code */
+    recip_state?: string;
+    /** Employer Identification Number */
+    ein?: string;
+    /** Total amount received */
+    amount: number;
+    /** Number of grants received */
+    count: number;
+    /** URL to Candid profile */
+    profile_url?: string;
+}
+
+export interface CandidTransaction {
+    /** Unique transaction identifier */
+    trans_key: string;
+    /** Funder identifier */
+    funder_key: string;
+    /** Funder name */
+    funder_name: string;
+    /** Recipient identifier */
+    recip_key: string;
+    /** Recipient name */
+    recip_name: string;
+    /** Grant amount */
+    amount: number;
+    /** Grant year */
+    year: number;
+    /** Grant purpose description */
+    description?: string;
+    /** Subject classification codes */
+    subject_codes?: string[];
+    /** Population codes */
+    population_codes?: string[];
+    /** Support type codes */
+    support_codes?: string[];
+}
+
+export interface CandidSummary {
+    /** Total grant amount */
+    total_amount: number;
+    /** Number of unique funders */
+    funder_count: number;
+    /** Number of unique recipients */
+    recip_count: number;
+    /** Total number of grants */
+    grant_count: number;
 }

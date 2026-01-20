@@ -22,6 +22,10 @@ export interface GrantWithScore {
     autoApplyEnabled?: boolean;
     sourceUrl?: string | null;
     applicationUrl?: string | null;
+    requirements?: any;
+    eligibilityCriteria?: string | null;
+    agencyCode?: string | null;
+    externalId?: string | null;
 }
 
 export interface ApplicationWithDetails {

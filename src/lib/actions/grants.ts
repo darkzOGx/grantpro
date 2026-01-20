@@ -19,12 +19,35 @@ export async function getGrants({
         isActive: true,
         // Only show grants that are still accepting applications (future deadline)
         deadline: { gte: new Date() },
+        // Strict Filter: Only show grants relevant to School Districts
+        OR: [
+            { title: { contains: "School", mode: "insensitive" } },
+            { title: { contains: "Education", mode: "insensitive" } },
+            { title: { contains: "K-12", mode: "insensitive" } },
+            { title: { contains: "District", mode: "insensitive" } },
+            { title: { contains: "Student", mode: "insensitive" } },
+            { title: { contains: "Teacher", mode: "insensitive" } },
+            { title: { contains: "Classroom", mode: "insensitive" } },
+            { title: { contains: "STEM", mode: "insensitive" } },
+            { title: { contains: "Arts", mode: "insensitive" } },
+            { title: { contains: "Nutrition", mode: "insensitive" } },
+            { title: { contains: "Lunch", mode: "insensitive" } },
+            { title: { contains: "Breakfast", mode: "insensitive" } },
+            { description: { contains: "School", mode: "insensitive" } },
+            { description: { contains: "Education", mode: "insensitive" } },
+            { description: { contains: "K-12", mode: "insensitive" } },
+        ]
     };
 
     if (search) {
-        where.OR = [
-            { title: { contains: search, mode: "insensitive" } },
-            { description: { contains: search, mode: "insensitive" } },
+        // Merge search with the school relevance filter
+        where.AND = [
+            {
+                OR: [
+                    { title: { contains: search, mode: "insensitive" } },
+                    { description: { contains: search, mode: "insensitive" } },
+                ]
+            }
         ];
     }
 

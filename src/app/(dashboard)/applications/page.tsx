@@ -2,6 +2,7 @@ import { getApplications } from "@/lib/actions/applications";
 import { ApplicationStatus, STATUS_LABELS, CATEGORY_LABELS } from "@/types";
 import { SuitabilityBadge } from "@/components/grants";
 import { formatCurrency, formatDate, cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 import {
     FileText,
     Clock,
@@ -55,13 +56,13 @@ export default async function ApplicationsPage() {
             {/* Page Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">My Applications</h1>
-                    <p className="text-sm text-gray-500 mt-1">
+                    <h1 className="text-2xl font-bold text-foreground">My Applications</h1>
+                    <p className="text-sm text-muted-foreground mt-1">
                         Track and manage your grant applications
                     </p>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
-                    <span className="text-gray-500">
+                    <span className="text-muted-foreground">
                         {applications.length} total applications
                     </span>
                 </div>
@@ -104,31 +105,31 @@ export default async function ApplicationsPage() {
             </div>
 
             {/* Applications Table */}
-            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div className="bg-card rounded-xl border border-border overflow-hidden">
                 <table className="w-full">
-                    <thead className="bg-gray-50 border-b border-gray-200">
+                    <thead className="bg-muted border-b border-border">
                         <tr>
-                            <th className="text-left px-6 py-4 text-sm font-semibold text-gray-900">
+                            <th className="text-left px-6 py-4 text-sm font-semibold text-foreground">
                                 Grant
                             </th>
-                            <th className="text-left px-6 py-4 text-sm font-semibold text-gray-900">
+                            <th className="text-left px-6 py-4 text-sm font-semibold text-foreground">
                                 Status
                             </th>
-                            <th className="text-left px-6 py-4 text-sm font-semibold text-gray-900">
+                            <th className="text-left px-6 py-4 text-sm font-semibold text-foreground">
                                 Match Score
                             </th>
-                            <th className="text-left px-6 py-4 text-sm font-semibold text-gray-900">
+                            <th className="text-left px-6 py-4 text-sm font-semibold text-foreground">
                                 Funding
                             </th>
-                            <th className="text-left px-6 py-4 text-sm font-semibold text-gray-900">
+                            <th className="text-left px-6 py-4 text-sm font-semibold text-foreground">
                                 Auto-Apply
                             </th>
-                            <th className="text-right px-6 py-4 text-sm font-semibold text-gray-900">
+                            <th className="text-right px-6 py-4 text-sm font-semibold text-foreground">
                                 Actions
                             </th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100">
+                    <tbody className="divide-y divide-border">
                         {applications.map((app) => {
                             const statusConfig = STATUS_CONFIG[app.status];
                             const StatusIcon = statusConfig.icon;
@@ -136,14 +137,14 @@ export default async function ApplicationsPage() {
                             return (
                                 <tr
                                     key={app.id}
-                                    className="hover:bg-gray-50 transition-colors"
+                                    className="hover:bg-muted/50 transition-colors"
                                 >
                                     <td className="px-6 py-4">
                                         <div>
-                                            <div className="font-medium text-gray-900">
+                                            <div className="font-medium text-foreground">
                                                 {app.grant.title}
                                             </div>
-                                            <div className="text-sm text-gray-500">
+                                            <div className="text-sm text-muted-foreground">
                                                 {CATEGORY_LABELS[app.grant.category as keyof typeof CATEGORY_LABELS]} •
                                                 Due {formatDate(new Date(app.grant.deadline))}
                                             </div>
@@ -153,6 +154,8 @@ export default async function ApplicationsPage() {
                                         <span
                                             className={cn(
                                                 "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium",
+                                                // Adjust status colors for dark mode compatibility if needed
+                                                // For now, we'll keep them but might need bg-opacity
                                                 statusConfig.bgColor,
                                                 statusConfig.color
                                             )}
@@ -168,22 +171,25 @@ export default async function ApplicationsPage() {
                                             showLabel={false}
                                         />
                                     </td>
-                                    <td className="px-6 py-4 text-sm text-gray-700">
+                                    <td className="px-6 py-4 text-sm text-muted-foreground">
                                         {formatCurrency(app.grant.fundingAmountMin)} -{" "}
                                         {formatCurrency(app.grant.fundingAmountMax)}
                                     </td>
                                     <td className="px-6 py-4">
-                                        {app.autoApplyEnabled ? (
-                                            <span className="inline-flex items-center gap-1 text-primary-600 text-sm">
-                                                <Zap className="w-4 h-4" />
-                                                Active
-                                            </span>
-                                        ) : (
-                                            <span className="text-gray-400 text-sm">Off</span>
-                                        )}
+                                        <div className="flex items-center gap-2">
+                                            {app.autoApplyEnabled ? (
+                                                <span className="inline-flex items-center gap-1 text-primary text-sm">
+                                                    <Zap className="w-4 h-4" />
+                                                    Active
+                                                </span>
+                                            ) : (
+                                                <span className="text-muted-foreground text-sm">Off</span>
+                                            )}
+                                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 font-normal bg-muted text-muted-foreground border-none">Coming Soon</Badge>
+                                        </div>
                                     </td>
                                     <td className="px-6 py-4 text-right">
-                                        <button className="inline-flex items-center gap-1 text-sm font-medium text-primary-600 hover:text-primary-700">
+                                        <button className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:text-primary/80">
                                             View Details
                                             <ArrowRight className="w-4 h-4" />
                                         </button>
@@ -209,32 +215,28 @@ function StatCard({
     color: "blue" | "purple" | "green" | "primary";
     isPercentage?: boolean;
 }) {
-    const colors = {
-        blue: "bg-blue-50 border-blue-100",
-        purple: "bg-purple-50 border-purple-100",
-        green: "bg-green-50 border-green-100",
-        primary: "bg-primary-50 border-primary-100",
+    // Mapping colors to theme-aware classes
+    // In dark/royal mode, we want subtle backgrounds or just borders
+    // Simplified approach: Use border colors based on prop, transparent bg or subtle bg
+    
+    const colorStyles = {
+        blue: "border-blue-200 bg-blue-50/50 dark:bg-blue-900/20 dark:border-blue-800 text-blue-700 dark:text-blue-300",
+        purple: "border-purple-200 bg-purple-50/50 dark:bg-purple-900/20 dark:border-purple-800 text-purple-700 dark:text-purple-300",
+        green: "border-green-200 bg-green-50/50 dark:bg-green-900/20 dark:border-green-800 text-green-700 dark:text-green-300",
+        primary: "border-primary/20 bg-primary/5 text-primary",
     };
-
-    const textColors = {
-        blue: "text-blue-700",
-        purple: "text-purple-700",
-        green: "text-green-700",
-        primary: "text-primary-700",
-    };
-
 
     return (
         <div
             className={cn(
-                "rounded-xl border px-4 py-3",
-                colors[color]
+                "rounded-xl border px-4 py-3 transition-colors",
+                colorStyles[color]
             )}
         >
-            <div className={cn("text-2xl font-bold", textColors[color])}>
+            <div className="text-2xl font-bold font-mono tracking-tight">
                 {value}
             </div>
-            <div className="text-sm text-gray-600">{label}</div>
+            <div className="text-sm opacity-80">{label}</div>
         </div>
     );
 }

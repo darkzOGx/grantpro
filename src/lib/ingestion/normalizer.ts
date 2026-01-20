@@ -92,7 +92,7 @@ export function normalizeCaliforniaGrant(
     const { min, max } = parseFundingRange(csvGrant.EstAvailFunds);
 
     // Infer category
-    const text = `${csvGrant.GrantTitle} ${csvGrant.Description || ""} ${csvGrant.Categories || ""}`;
+    const text = `${csvGrant.Title} ${csvGrant.Description || ""} ${csvGrant.Categories || ""}`;
     const category = inferCategoryFromCaliforniaCategories(csvGrant.Categories, text);
 
     // Parse deadline
@@ -106,7 +106,7 @@ export function normalizeCaliforniaGrant(
     }
 
     return {
-        title: csvGrant.GrantTitle,
+        title: csvGrant.Title,
         category,
         sourceType: "STATE" as GrantSourceType,
         fundingAmountMin: min,
@@ -117,11 +117,11 @@ export function normalizeCaliforniaGrant(
         cfda: undefined,
         agencyCode: csvGrant.AgencyDept,
         description: csvGrant.Description,
-        eligibilityCriteria: csvGrant.EligibleApplicants,
+        eligibilityCriteria: csvGrant.ApplicantType,
         applicationUrl: csvGrant.GrantURL,
         requirements: {
-            geographicEligibility: csvGrant.GeographicEligibility,
-            matchingFundsRequired: csvGrant.MatchingFundsRequired === "Yes",
+            geographicEligibility: csvGrant.Geography,
+            matchingFundsRequired: csvGrant.MatchingFunds === "Yes",
             categories: csvGrant.Categories?.split(",").map((c) => c.trim()),
         },
         isActive: true,

@@ -34,48 +34,48 @@ export default async function PipelinePage() {
 
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-white rounded-xl border border-gray-200 p-5 flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center">
-                        <Trophy className="w-6 h-6 text-amber-600" />
+                <div className="bg-white rounded-xl border border-gray-200 p-5 flex items-center gap-4 data-[theme=royal]:bg-white/10 data-[theme=royal]:border-white/10">
+                    <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center data-[theme=royal]:bg-amber-500/20">
+                        <Trophy className="w-6 h-6 text-amber-600 data-[theme=royal]:text-amber-400" />
                     </div>
                     <div>
-                        <div className="text-2xl font-bold text-gray-900">{uniqueApplications}</div>
-                        <div className="text-sm text-gray-500">Active Applications</div>
+                        <div className="text-2xl font-bold text-gray-900 data-[theme=royal]:text-white">{uniqueApplications}</div>
+                        <div className="text-sm text-gray-500 data-[theme=royal]:text-white/60">Active Applications</div>
                     </div>
                 </div>
 
-                <div className="bg-white rounded-xl border border-gray-200 p-5 flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-primary-100 flex items-center justify-center">
-                        <TrendingUp className="w-6 h-6 text-primary-600" />
+                <div className="bg-white rounded-xl border border-gray-200 p-5 flex items-center gap-4 data-[theme=royal]:bg-white/10 data-[theme=royal]:border-white/10">
+                    <div className="w-12 h-12 rounded-xl bg-primary-100 flex items-center justify-center data-[theme=royal]:bg-primary/20">
+                        <TrendingUp className="w-6 h-6 text-primary-600 data-[theme=royal]:text-primary-foreground" />
                     </div>
                     <div>
-                        <div className="text-2xl font-bold text-gray-900">
+                        <div className="text-2xl font-bold text-gray-900 data-[theme=royal]:text-white">
                             {totalCount}
                         </div>
-                        <div className="text-sm text-gray-500">Total Deliverables</div>
+                        <div className="text-sm text-gray-500 data-[theme=royal]:text-white/60">Total Deliverables</div>
                     </div>
                 </div>
 
-                <div className="bg-white rounded-xl border border-gray-200 p-5 flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-success-50 flex items-center justify-center">
-                        <CheckCircle2 className="w-6 h-6 text-success-600" />
+                <div className="bg-white rounded-xl border border-gray-200 p-5 flex items-center gap-4 data-[theme=royal]:bg-white/10 data-[theme=royal]:border-white/10">
+                    <div className="w-12 h-12 rounded-xl bg-success-50 flex items-center justify-center data-[theme=royal]:bg-emerald-500/20">
+                        <CheckCircle2 className="w-6 h-6 text-success-600 data-[theme=royal]:text-emerald-400" />
                     </div>
                     <div>
-                        <div className="text-2xl font-bold text-gray-900">
+                        <div className="text-2xl font-bold text-gray-900 data-[theme=royal]:text-white">
                             {completionRate}%
                         </div>
-                        <div className="text-sm text-gray-500">Completion Rate</div>
+                        <div className="text-sm text-gray-500 data-[theme=royal]:text-white/60">Completion Rate</div>
                     </div>
                 </div>
             </div>
 
             {/* Pipeline Board */}
-            <div className="bg-white rounded-xl border border-gray-200 p-6">
+            <div className="bg-white rounded-xl border border-gray-200 p-6 data-[theme=royal]:bg-white/5 data-[theme=royal]:border-white/10">
                 <div className="mb-4 flex items-center justify-between">
-                    <h2 className="text-lg font-semibold text-gray-900">
+                    <h2 className="text-lg font-semibold text-gray-900 data-[theme=royal]:text-white">
                         Deliverable Pipeline
                     </h2>
-                    <span className="text-sm text-gray-500">
+                    <span className="text-sm text-gray-500 data-[theme=royal]:text-white/60">
                         Drag cards to update status
                     </span>
                 </div>

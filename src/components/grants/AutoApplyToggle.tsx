@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { cn } from "@/lib/utils";
 import { Loader2, Zap } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 interface AutoApplyToggleProps {
     applicationId: string;
@@ -90,6 +91,7 @@ export function AutoApplyToggle({
                 >
                     {isEnabled ? "Auto-Apply ON" : "Auto-Apply OFF"}
                 </span>
+                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 font-normal bg-gray-100 text-gray-500 border-none">Coming Soon</Badge>
             </div>
 
             {!canToggle && (

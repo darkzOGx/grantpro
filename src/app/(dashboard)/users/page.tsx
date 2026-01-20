@@ -12,6 +12,7 @@ import {
     DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Plus, Search, MoreHorizontal, Filter, Download } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 // Mock Data
 const users = [
